@@ -1,4 +1,5 @@
-mod hash_utils;
+mod pre_compute;
+mod utils;
 
 fn main() {
     println!("Hello, world!");
