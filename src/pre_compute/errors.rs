@@ -1,12 +1,19 @@
-#[derive(Debug, Clone, PartialEq)]
+use thiserror::Error;
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ReplicateStatusCause {
+    #[error("TEE challenge private key is missing")]
     PreComputeTeeChallengePrivateKeyMissing,
+    #[error("Invalid TEE signature")]
     PreComputeInvalidTeeSignature,
+    #[error("Worker address is missing")]
     PreComputeWorkerAddressMissing,
+    #[error("Task ID is missing")]
     PreComputeTaskIdMissing,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Error)]
+#[error("PreCompute failed: {exit_cause}")]
 pub struct PreComputeError {
     exit_cause: ReplicateStatusCause,
 }
@@ -20,11 +27,3 @@ impl PreComputeError {
         &self.exit_cause
     }
 }
-
-impl std::fmt::Display for PreComputeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "PreComputeException: {:?}", self.exit_cause)
-    }
-}
-
-impl std::error::Error for PreComputeError {}
