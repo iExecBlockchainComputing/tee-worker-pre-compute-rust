@@ -98,9 +98,9 @@ mod env_utils_tests {
     fn test_get_challenge() {
         with_vars(
             vec![
-                ("SignWorkerAddress", Some(WORKER_ADDRESS)),
+                ("SIGN_WORKER_ADDRESS", Some(WORKER_ADDRESS)),
                 (
-                    "SignTeeChallengePrivateKey",
+                    "SIGN_TEE_CHALLENGE_PRIVATE_KEY",
                     Some(ENCLAVE_CHALLENGE_PRIVATE_KEY),
                 ),
             ],
@@ -119,7 +119,7 @@ mod env_utils_tests {
     fn error_when_worker_address_missing() {
         with_vars(
             vec![(
-                "SignTeeChallengePrivateKey",
+                "SIGN_TEE_CHALLENGE_PRIVATE_KEY",
                 Some(ENCLAVE_CHALLENGE_PRIVATE_KEY),
             )],
             || {
@@ -134,7 +134,7 @@ mod env_utils_tests {
 
     #[test]
     fn error_when_challenge_private_key_missing() {
-        with_vars(vec![("SignWorkerAddress", Some(WORKER_ADDRESS))], || {
+        with_vars(vec![("SIGN_WORKER_ADDRESS", Some(WORKER_ADDRESS))], || {
             let err = challenge(CHAIN_TASK_ID).unwrap_err();
             assert_eq!(
                 *err.exit_cause(),
