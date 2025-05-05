@@ -1,9 +1,28 @@
 use crate::pre_compute::errors::{PreComputeError, ReplicateStatusCause};
-use crate::utils::env_utils::{TeeSessionEnvironmentVariable, get_env_var_or_error};
+use crate::utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable};
 use crate::utils::hash_utils::{concatenate_and_hash, hex_string_to_byte_array};
 use alloy_signer::{Signature, SignerSync};
 use alloy_signer_local::PrivateKeySigner;
 
+/// Signs a message hash using the enclave challenge private key.
+///
+/// This function takes a hex-encoded message hash and a private key, then signs the message
+/// using the private key. It converts the signature to a string representation.
+///
+/// # Arguments
+///
+/// * `message_hash` - A hex-encoded string representing the hash of the message to sign
+/// * `enclave_challenge_private_key` - A string containing the private key to use for signing
+///
+/// # Returns
+///
+/// * `Result<String, PreComputeError>` - A string representation of the signature if successful,
+///   or an error if the private key is invalid or the signing operation fails
+///
+/// # Errors
+///
+/// * `PreComputeTeeChallengePrivateKeyMissing` - When the private key is invalid or cannot be parsed
+/// * `PreComputeInvalidTeeSignature` - When the signing operation fails
 pub fn sign_enclave_challenge(
     message_hash: &str,
     enclave_challenge_private_key: &str,
@@ -21,6 +40,27 @@ pub fn sign_enclave_challenge(
     Ok(signature.to_string())
 }
 
+/// Generates a challenge signature for a given chain task ID.
+///
+/// This function creates a challenge signature by:
+/// 1. Retrieving the worker address and private key from environment variables
+/// 2. Concatenating and hashing the chain task ID with the worker address
+/// 3. Signing the resulting hash with the TEE challenge private key
+///
+/// # Arguments
+///
+/// * `chain_task_id` - A string representing the chain task ID to use in the challenge
+///
+/// # Returns
+///
+/// * `Result<String, PreComputeError>` - The challenge signature as a string if successful,
+///   or an error if environment variables are missing or signing fails
+///
+/// # Errors
+///
+/// * `PreComputeWorkerAddressMissing` - When the worker address environment variable is missing
+/// * `PreComputeTeeChallengePrivateKeyMissing` - When the private key environment variable is missing
+/// * Other errors that may be propagated from `sign_enclave_challenge`
 pub fn challenge(chain_task_id: &str) -> Result<String, PreComputeError> {
     let worker_address = get_env_var_or_error(
         TeeSessionEnvironmentVariable::SIGN_WORKER_ADDRESS,

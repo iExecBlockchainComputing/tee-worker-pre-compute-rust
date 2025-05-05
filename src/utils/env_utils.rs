@@ -9,9 +9,9 @@ pub enum TeeSessionEnvironmentVariable {
 impl TeeSessionEnvironmentVariable {
     pub fn name(&self) -> &str {
         match self {
-            TeeSessionEnvironmentVariable::SIGN_WORKER_ADDRESS => "SignWorkerAddress",
+            TeeSessionEnvironmentVariable::SIGN_WORKER_ADDRESS => "SIGN_WORKER_ADDRESS",
             TeeSessionEnvironmentVariable::SIGN_TEE_CHALLENGE_PRIVATE_KEY => {
-                "SignTeeChallengePrivateKey"
+                "SIGN_TEE_CHALLENGE_PRIVATE_KEY"
             }
         }
     }
