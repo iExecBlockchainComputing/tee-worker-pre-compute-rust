@@ -4,25 +4,39 @@ use crate::utils::hash_utils::{concatenate_and_hash, hex_string_to_byte_array};
 use alloy_signer::{Signature, SignerSync};
 use alloy_signer_local::PrivateKeySigner;
 
-/// Signs a message hash using the enclave challenge private key.
+/// Signs a message hash using the provided enclave challenge private key.
 ///
-/// This function takes a hex-encoded message hash and a private key, then signs the message
-/// using the private key. It converts the signature to a string representation.
+/// This function takes a message hash in hexadecimal string format, converts it to a byte array,
+/// and signs it using the provided private key. The resulting signature is then converted back
+/// to a string representation.
 ///
 /// # Arguments
 ///
-/// * `message_hash` - A hex-encoded string representing the hash of the message to sign
-/// * `enclave_challenge_private_key` - A string containing the private key to use for signing
+/// * `message_hash` - A hexadecimal string representing the hash to be signed
+/// * `enclave_challenge_private_key` - A string containing the private key used for signing
 ///
 /// # Returns
 ///
-/// * `Result<String, PreComputeError>` - A string representation of the signature if successful,
-///   or an error if the private key is invalid or the signing operation fails
+/// * `Ok(String)` - The signature as a hexadecimal string if successful
+/// * `Err(PreComputeError)` - An error if the private key is invalid or if signing fails
 ///
 /// # Errors
 ///
-/// * `PreComputeTeeChallengePrivateKeyMissing` - When the private key is invalid or cannot be parsed
-/// * `PreComputeInvalidTeeSignature` - When the signing operation fails
+/// This function will return an error in the following situations:
+/// * The provided private key cannot be parsed as a valid `PrivateKeySigner` (returns `PreComputeTeeChallengePrivateKeyMissing`)
+/// * The signing operation fails (returns `PreComputeInvalidTeeSignature`)
+///
+/// # Example
+///
+/// ```
+/// let message_hash = "0x5cd0e9c5180dd35e2b8285d0db4ded193a9b4be6fbfab90cbadccecab130acad";
+/// let private_key = "0xdd3b993ec21c71c1f6d63a5240850e0d4d8dd83ff70d29e49247958548c1d479";
+///
+/// match sign_enclave_challenge(message_hash, private_key) {
+///     Ok(signature) => println!("Signature: {}", signature),
+///     Err(e) => eprintln!("Error: {:?}", e),
+/// }
+/// ```
 pub fn sign_enclave_challenge(
     message_hash: &str,
     enclave_challenge_private_key: &str,
@@ -30,7 +44,7 @@ pub fn sign_enclave_challenge(
     let signer: PrivateKeySigner = enclave_challenge_private_key
         .parse::<PrivateKeySigner>()
         .map_err(|_| {
-            PreComputeError::new(ReplicateStatusCause::PreComputeTeeChallengePrivateKeyMissing)
+            PreComputeError::new(ReplicateStatusCause::PreComputeInvalidEnclaveChallengePrivateKey)
         })?;
 
     let signature: Signature = signer
@@ -42,29 +56,49 @@ pub fn sign_enclave_challenge(
 
 /// Generates a challenge signature for a given chain task ID.
 ///
-/// This function creates a challenge signature by:
-/// 1. Retrieving the worker address and private key from environment variables
-/// 2. Concatenating and hashing the chain task ID with the worker address
-/// 3. Signing the resulting hash with the TEE challenge private key
+/// This function retrieves the worker address and TEE challenge private key from the environment,
+/// then creates a message hash by concatenating and hashing the chain task ID and worker address.
+/// Finally, it signs this message hash with the private key.
 ///
 /// # Arguments
 ///
-/// * `chain_task_id` - A string representing the chain task ID to use in the challenge
+/// * `chain_task_id` - A string identifier for the chain task
 ///
 /// # Returns
 ///
-/// * `Result<String, PreComputeError>` - The challenge signature as a string if successful,
-///   or an error if environment variables are missing or signing fails
+/// * `Ok(String)` - The challenge signature as a hexadecimal string if successful
+/// * `Err(PreComputeError)` - An error if required environment variables are missing or if signing fails
 ///
 /// # Errors
 ///
-/// * `PreComputeWorkerAddressMissing` - When the worker address environment variable is missing
-/// * `PreComputeTeeChallengePrivateKeyMissing` - When the private key environment variable is missing
-/// * Other errors that may be propagated from `sign_enclave_challenge`
-pub fn challenge(chain_task_id: &str) -> Result<String, PreComputeError> {
+/// This function will return an error in the following situations:
+/// * The worker address environment variable is missing (returns `PreComputeWorkerAddressMissing`)
+/// * The TEE challenge private key environment variable is missing (returns `PreComputeTeeChallengePrivateKeyMissing`)
+/// * The signing operation fails (returns `PreComputeInvalidTeeSignature`)
+///
+/// # Environment Variables
+///
+/// * `SIGN_WORKER_ADDRESS` - The worker's address used in message hash calculation
+/// * `SIGN_TEE_CHALLENGE_PRIVATE_KEY` - The private key used for signing the challenge
+///
+/// # Example
+///
+/// ```
+/// // Assuming the necessary environment variables are set:
+/// // SIGN_WORKER_ADDRESS=0xabcdef123456789
+/// // SIGN_TEE_CHALLENGE_PRIVATE_KEY=0xdd3b993ec21c71c1f6d63a5240850e0d4d8dd83ff70d29e49247958548c1d479
+///
+/// let chain_task_id = "0x123456789abcdef";
+///
+/// match challenge(chain_task_id) {
+///     Ok(signature) => println!("Challenge signature: {}", signature),
+///     Err(e) => eprintln!("Error generating challenge: {:?}", e),
+/// }
+/// ```
+pub fn get_challenge(chain_task_id: &str) -> Result<String, PreComputeError> {
     let worker_address = get_env_var_or_error(
         TeeSessionEnvironmentVariable::SIGN_WORKER_ADDRESS,
-        ReplicateStatusCause::PreComputeWorkerAddressMissing,
+        ReplicateStatusCause::PreComputeInvalidEnclaveChallengePrivateKey,
     )?;
 
     let tee_challenge_private_key = get_env_var_or_error(
@@ -109,7 +143,7 @@ mod env_utils_tests {
                 let expected_signature =
                     sign_enclave_challenge(&message_hash, ENCLAVE_CHALLENGE_PRIVATE_KEY).unwrap();
 
-                let actual_challenge = challenge(CHAIN_TASK_ID).unwrap();
+                let actual_challenge = get_challenge(CHAIN_TASK_ID).unwrap();
                 assert_eq!(actual_challenge, expected_signature);
             },
         );
@@ -123,10 +157,10 @@ mod env_utils_tests {
                 Some(ENCLAVE_CHALLENGE_PRIVATE_KEY),
             )],
             || {
-                let err = challenge(CHAIN_TASK_ID).unwrap_err();
+                let err = get_challenge(CHAIN_TASK_ID).unwrap_err();
                 assert_eq!(
                     *err.exit_cause(),
-                    ReplicateStatusCause::PreComputeWorkerAddressMissing
+                    ReplicateStatusCause::PreComputeInvalidEnclaveChallengePrivateKey
                 );
             },
         );
@@ -135,7 +169,7 @@ mod env_utils_tests {
     #[test]
     fn error_when_challenge_private_key_missing() {
         with_vars(vec![("SIGN_WORKER_ADDRESS", Some(WORKER_ADDRESS))], || {
-            let err = challenge(CHAIN_TASK_ID).unwrap_err();
+            let err = get_challenge(CHAIN_TASK_ID).unwrap_err();
             assert_eq!(
                 *err.exit_cause(),
                 ReplicateStatusCause::PreComputeTeeChallengePrivateKeyMissing

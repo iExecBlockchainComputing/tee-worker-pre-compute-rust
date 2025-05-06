@@ -4,10 +4,10 @@ use thiserror::Error;
 pub enum ReplicateStatusCause {
     #[error("TEE challenge private key is missing")]
     PreComputeTeeChallengePrivateKeyMissing,
+    #[error("Invalid enclave challenge private key")]
+    PreComputeInvalidEnclaveChallengePrivateKey,
     #[error("Invalid TEE signature")]
     PreComputeInvalidTeeSignature,
-    #[error("Worker address is missing")]
-    PreComputeWorkerAddressMissing,
     #[error("Task ID is missing")]
     PreComputeTaskIdMissing,
 }
