@@ -44,7 +44,7 @@ pub fn sign_enclave_challenge(
     let signer: PrivateKeySigner = enclave_challenge_private_key
         .parse::<PrivateKeySigner>()
         .map_err(|_| {
-            PreComputeError::new(ReplicateStatusCause::PreComputeInvalidEnclaveChallengePrivateKey)
+            PreComputeError::new(ReplicateStatusCause::PreComputeWorkerAddressMissing)
         })?;
 
     let signature: Signature = signer
@@ -98,7 +98,7 @@ pub fn sign_enclave_challenge(
 pub fn get_challenge(chain_task_id: &str) -> Result<String, PreComputeError> {
     let worker_address = get_env_var_or_error(
         TeeSessionEnvironmentVariable::SIGN_WORKER_ADDRESS,
-        ReplicateStatusCause::PreComputeInvalidEnclaveChallengePrivateKey,
+        ReplicateStatusCause::PreComputeWorkerAddressMissing,
     )?;
 
     let tee_challenge_private_key = get_env_var_or_error(
@@ -160,7 +160,7 @@ mod env_utils_tests {
                 let err = get_challenge(CHAIN_TASK_ID).unwrap_err();
                 assert_eq!(
                     *err.exit_cause(),
-                    ReplicateStatusCause::PreComputeInvalidEnclaveChallengePrivateKey
+                    ReplicateStatusCause::PreComputeWorkerAddressMissing
                 );
             },
         );
