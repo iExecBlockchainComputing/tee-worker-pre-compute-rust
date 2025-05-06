@@ -1,5 +1,5 @@
 use crate::pre_compute::errors::{PreComputeError, ReplicateStatusCause};
-use crate::utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable};
+use crate::utils::env_utils::{TeeSessionEnvironmentVariable, get_env_var_or_error};
 use crate::utils::hash_utils::{concatenate_and_hash, hex_string_to_byte_array};
 use alloy_signer::{Signature, SignerSync};
 use alloy_signer_local::PrivateKeySigner;
@@ -43,12 +43,10 @@ pub fn sign_enclave_challenge(
 ) -> Result<String, PreComputeError> {
     let signer: PrivateKeySigner = enclave_challenge_private_key
         .parse::<PrivateKeySigner>()
-        .map_err(|_| {
-            PreComputeError::new(ReplicateStatusCause::PreComputeWorkerAddressMissing)
-        })?;
+        .map_err(|_| PreComputeError::new(ReplicateStatusCause::PreComputeWorkerAddressMissing))?;
 
     let signature: Signature = signer
-        .sign_message_sync(&hex_string_to_byte_array(&message_hash))
+        .sign_message_sync(&hex_string_to_byte_array(message_hash))
         .map_err(|_| PreComputeError::new(ReplicateStatusCause::PreComputeInvalidTeeSignature))?;
 
     Ok(signature.to_string())
