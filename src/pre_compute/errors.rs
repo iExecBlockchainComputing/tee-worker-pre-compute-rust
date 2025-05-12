@@ -1,6 +1,7 @@
+use serde::Serialize;
 use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Error)]
 pub enum ReplicateStatusCause {
     #[error("TEE challenge private key is missing")]
     PreComputeTeeChallengePrivateKeyMissing,
@@ -10,6 +11,8 @@ pub enum ReplicateStatusCause {
     PreComputeWorkerAddressMissing,
     #[error("Task ID is missing")]
     PreComputeTaskIdMissing,
+    #[error("Pre Compute failed due to an unknown issue")]
+    PreComputeFailedUnknownIssue,
 }
 
 #[derive(Debug, Clone, PartialEq, Error)]

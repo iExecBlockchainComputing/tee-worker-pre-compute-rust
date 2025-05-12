@@ -2,6 +2,7 @@ use crate::pre_compute::errors::{PreComputeError, ReplicateStatusCause};
 use std::env;
 
 pub enum TeeSessionEnvironmentVariable {
+    IEXEC_TASK_ID,
     SIGN_WORKER_ADDRESS,
     SIGN_TEE_CHALLENGE_PRIVATE_KEY,
 }
@@ -9,6 +10,7 @@ pub enum TeeSessionEnvironmentVariable {
 impl TeeSessionEnvironmentVariable {
     pub fn name(&self) -> &str {
         match self {
+            TeeSessionEnvironmentVariable::IEXEC_TASK_ID => "IEXEC_TASK_ID",
             TeeSessionEnvironmentVariable::SIGN_WORKER_ADDRESS => "SIGN_WORKER_ADDRESS",
             TeeSessionEnvironmentVariable::SIGN_TEE_CHALLENGE_PRIVATE_KEY => {
                 "SIGN_TEE_CHALLENGE_PRIVATE_KEY"
