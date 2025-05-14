@@ -5,6 +5,7 @@ pub enum TeeSessionEnvironmentVariable {
     IEXEC_TASK_ID,
     SIGN_WORKER_ADDRESS,
     SIGN_TEE_CHALLENGE_PRIVATE_KEY,
+    WORKER_HOST_ENV_VAR,
 }
 
 impl TeeSessionEnvironmentVariable {
@@ -15,6 +16,7 @@ impl TeeSessionEnvironmentVariable {
             TeeSessionEnvironmentVariable::SIGN_TEE_CHALLENGE_PRIVATE_KEY => {
                 "SIGN_TEE_CHALLENGE_PRIVATE_KEY"
             }
+            TeeSessionEnvironmentVariable::WORKER_HOST_ENV_VAR => "WORKER_HOST_ENV_VAR",
         }
     }
 }
