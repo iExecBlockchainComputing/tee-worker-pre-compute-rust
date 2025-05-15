@@ -1,7 +1,8 @@
-use crate::compute::errors::ReplicateStatusCause;
-use crate::compute::utils::env_utils::{TeeSessionEnvironmentVariable, get_env_var_or_error};
-use reqwest::header::AUTHORIZATION;
-use reqwest::{Error, blocking::Client};
+use crate::compute::{
+    errors::ReplicateStatusCause,
+    utils::env_utils::{TeeSessionEnvironmentVariable, get_env_var_or_error},
+};
+use reqwest::{Error, blocking::Client, header::AUTHORIZATION};
 use serde::Serialize;
 
 /// Represents payload that can be sent to the worker API to report the outcome of the
@@ -156,6 +157,7 @@ impl WorkerApiClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::compute::errors::ReplicateStatusCause::*;
     use crate::compute::utils::env_utils::TeeSessionEnvironmentVariable::WORKER_HOST_ENV_VAR;
     use serde_json::{json, to_string};
     use temp_env::with_vars;
@@ -167,18 +169,20 @@ mod tests {
     // region ExitMessage()
     #[test]
     fn should_serialize_exit_message() {
-        let causes = [
-            ReplicateStatusCause::PreComputeInvalidTeeSignature,
-            ReplicateStatusCause::PreComputeWorkerAddressMissing,
-            ReplicateStatusCause::PreComputeFailedUnknownIssue,
-        ];
+        let exit_message = ExitMessage::from(&PreComputeInvalidTeeSignature);
+        let serialized = to_string(&exit_message).expect("Failed to serialize");
+        let expected = format!("{{\"cause\":\"PreComputeInvalidTeeSignature\"}}");
+        assert_eq!(serialized, expected);
 
-        for cause in causes {
-            let exit_message = ExitMessage::from(&cause);
-            let serialized = to_string(&exit_message).expect("Failed to serialize");
-            let expected = format!("{{\"cause\":{}}}", to_string(&cause).unwrap());
-            assert_eq!(serialized, expected);
-        }
+        let exit_message = ExitMessage::from(&PreComputeWorkerAddressMissing);
+        let serialized = to_string(&exit_message).expect("Failed to serialize");
+        let expected = format!("{{\"cause\":\"PreComputeWorkerAddressMissing\"}}");
+        assert_eq!(serialized, expected);
+
+        let exit_message = ExitMessage::from(&PreComputeFailedUnknownIssue);
+        let serialized = to_string(&exit_message).expect("Failed to serialize");
+        let expected = format!("{{\"cause\":\"PreComputeFailedUnknownIssue\"}}");
+        assert_eq!(serialized, expected);
     }
     // endregion
 
