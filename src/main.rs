@@ -1,4 +1,4 @@
-mod pre_compute;
+mod compute;
 mod api;
 
 fn main() {

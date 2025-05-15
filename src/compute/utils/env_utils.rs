@@ -1,4 +1,4 @@
-use crate::pre_compute::errors::{PreComputeError, ReplicateStatusCause};
+use crate::compute::errors::{PreComputeError, ReplicateStatusCause};
 use std::env;
 
 pub enum TeeSessionEnvironmentVariable {

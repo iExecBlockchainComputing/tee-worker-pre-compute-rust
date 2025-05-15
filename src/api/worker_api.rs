@@ -1,5 +1,5 @@
-use crate::pre_compute::errors::ReplicateStatusCause;
-use crate::pre_compute::utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable};
+use crate::compute::errors::ReplicateStatusCause;
+use crate::compute::utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable};
 use reqwest::header::AUTHORIZATION;
 use reqwest::{blocking::Client, Error};
 use serde::Serialize;
@@ -21,8 +21,8 @@ use serde::Serialize;
 /// # Example
 ///
 /// ```
-/// use crate::pre_compute::worker_api::ExitMessage;
-/// use crate::pre_compute::errors::ReplicateStatusCause;
+/// use crate::compute::worker_api::ExitMessage;
+/// use crate::compute::errors::ReplicateStatusCause;
 ///
 /// let exit_message = ExitMessage::from(&ReplicateStatusCause::PreComputeInvalidTeeSignature);
 /// ```
@@ -46,7 +46,7 @@ impl<'a> From<&'a ReplicateStatusCause> for ExitMessage<'a> {
 /// # Example
 ///
 /// ```
-/// use crate::pre_compute::worker_api::WorkerApiClient;
+/// use crate::compute::worker_api::WorkerApiClient;
 ///
 /// let client = WorkerApiClient::new("http://worker:13100");
 /// ```
@@ -116,8 +116,8 @@ impl WorkerApiClient {
     /// # Example
     ///
     /// ```
-    /// use crate::pre_compute::worker_api::{ExitMessage, WorkerApiClient};
-    /// use crate::pre_compute::errors::ReplicateStatusCause;
+    /// use crate::compute::worker_api::{ExitMessage, WorkerApiClient};
+    /// use crate::compute::errors::ReplicateStatusCause;
     ///
     /// let client = WorkerApiClient::new("http://worker:13100");
     /// let exit_message = ExitMessage::from(&ReplicateStatusCause::PreComputeInvalidTeeSignature);
@@ -156,7 +156,7 @@ impl WorkerApiClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pre_compute::utils::env_utils::TeeSessionEnvironmentVariable::WORKER_HOST_ENV_VAR;
+    use crate::compute::utils::env_utils::TeeSessionEnvironmentVariable::WORKER_HOST_ENV_VAR;
     use serde_json::{json, to_string};
     use temp_env::with_vars;
     use wiremock::{

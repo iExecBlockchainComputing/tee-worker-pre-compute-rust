@@ -1,8 +1,8 @@
 use crate::api::worker_api::{ExitMessage, WorkerApiClient};
-use crate::pre_compute::errors::{PreComputeError, ReplicateStatusCause};
-use crate::pre_compute::signer::get_challenge;
-use crate::pre_compute::utils::env_utils::get_env_var_or_error;
-use crate::pre_compute::utils::env_utils::TeeSessionEnvironmentVariable::IEXEC_TASK_ID;
+use crate::compute::errors::{PreComputeError, ReplicateStatusCause};
+use crate::compute::signer::get_challenge;
+use crate::compute::utils::env_utils::get_env_var_or_error;
+use crate::compute::utils::env_utils::TeeSessionEnvironmentVariable::IEXEC_TASK_ID;
 use log::{error, info};
 
 pub fn start() -> i32 {
