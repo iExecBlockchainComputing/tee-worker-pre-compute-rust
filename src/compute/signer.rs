@@ -1,5 +1,5 @@
 use crate::compute::errors::{PreComputeError, ReplicateStatusCause};
-use crate::compute::utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable};
+use crate::compute::utils::env_utils::{TeeSessionEnvironmentVariable, get_env_var_or_error};
 use crate::compute::utils::hash_utils::{concatenate_and_hash, hex_string_to_byte_array};
 use alloy_signer::{Signature, SignerSync};
 use alloy_signer_local::PrivateKeySigner;

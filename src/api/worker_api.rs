@@ -1,7 +1,7 @@
 use crate::compute::errors::ReplicateStatusCause;
-use crate::compute::utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable};
+use crate::compute::utils::env_utils::{TeeSessionEnvironmentVariable, get_env_var_or_error};
 use reqwest::header::AUTHORIZATION;
-use reqwest::{blocking::Client, Error};
+use reqwest::{Error, blocking::Client};
 use serde::Serialize;
 
 /// Represents payload that can be sent to the worker API to report the outcome of the
@@ -58,7 +58,7 @@ pub struct WorkerApiClient {
 const DEFAULT_WORKER_HOST: &str = "worker:13100";
 
 impl WorkerApiClient {
-     fn new(base_url: &str) -> Self {
+    fn new(base_url: &str) -> Self {
         WorkerApiClient {
             base_url: base_url.to_string(),
             client: Client::new(),
@@ -86,7 +86,7 @@ impl WorkerApiClient {
             TeeSessionEnvironmentVariable::WORKER_HOST_ENV_VAR,
             ReplicateStatusCause::PreComputeWorkerAddressMissing,
         )
-            .unwrap_or_else(|_| DEFAULT_WORKER_HOST.to_string());
+        .unwrap_or_else(|_| DEFAULT_WORKER_HOST.to_string());
 
         let base_url = format!("http://{}", &worker_host);
         Self::new(&base_url)
@@ -160,8 +160,8 @@ mod tests {
     use serde_json::{json, to_string};
     use temp_env::with_vars;
     use wiremock::{
-        matchers::{body_json, header, method, path}, Mock, MockServer,
-        ResponseTemplate,
+        Mock, MockServer, ResponseTemplate,
+        matchers::{body_json, header, method, path},
     };
 
     // region ExitMessage()
@@ -186,10 +186,7 @@ mod tests {
     #[test]
     fn should_get_worker_api_client_with_env_var() {
         with_vars(
-            vec![(
-                WORKER_HOST_ENV_VAR.name(),
-                Some("custom-worker-host:9999"),
-            )],
+            vec![(WORKER_HOST_ENV_VAR.name(), Some("custom-worker-host:9999"))],
             || {
                 let client = WorkerApiClient::from_env();
                 assert_eq!(client.base_url, "http://custom-worker-host:9999");
@@ -199,7 +196,7 @@ mod tests {
 
     #[test]
     fn should_get_worker_api_client_without_env_var() {
-        temp_env::with_vars_unset( vec![WORKER_HOST_ENV_VAR.name()] , || {
+        temp_env::with_vars_unset(vec![WORKER_HOST_ENV_VAR.name()], || {
             let client = WorkerApiClient::from_env();
             assert_eq!(client.base_url, format!("http://{}", DEFAULT_WORKER_HOST));
         });
@@ -238,8 +235,8 @@ mod tests {
                 &exit_message,
             )
         })
-            .await
-            .expect("Task panicked");
+        .await
+        .expect("Task panicked");
 
         assert!(result.is_ok());
     }
@@ -266,8 +263,8 @@ mod tests {
                 &exit_message,
             )
         })
-            .await
-            .expect("Task panicked");
+        .await
+        .expect("Task panicked");
 
         assert!(result.is_err());
 

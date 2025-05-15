@@ -1,8 +1,8 @@
 use crate::api::worker_api::{ExitMessage, WorkerApiClient};
 use crate::compute::errors::{PreComputeError, ReplicateStatusCause};
 use crate::compute::signer::get_challenge;
-use crate::compute::utils::env_utils::get_env_var_or_error;
 use crate::compute::utils::env_utils::TeeSessionEnvironmentVariable::IEXEC_TASK_ID;
+use crate::compute::utils::env_utils::get_env_var_or_error;
 use log::{error, info};
 
 pub fn start() -> i32 {
@@ -47,9 +47,11 @@ pub fn start() -> i32 {
         cause: &exit_cause.clone(),
     };
 
-    match WorkerApiClient::from_env()
-        .send_exit_cause_for_pre_compute_stage(&authorization, &chain_task_id, &exit_message)
-    {
+    match WorkerApiClient::from_env().send_exit_cause_for_pre_compute_stage(
+        &authorization,
+        &chain_task_id,
+        &exit_message,
+    ) {
         Ok(_) => 1,
         Err(e) => {
             error!("Failed to report exitCause [{:?}]", exit_cause);
@@ -93,13 +95,20 @@ mod pre_compute_start_tests {
     fn test_start_run_fails_get_challenge_fails_signer_address_missing() {
         let env_vars_to_set = vec![
             (ENV_IEXEC_TASK_ID, Some(CHAIN_TASK_ID)),
-            (ENV_SIGN_TEE_CHALLENGE_PRIVATE_KEY, Some(ENCLAVE_CHALLENGE_PRIVATE_KEY)),
+            (
+                ENV_SIGN_TEE_CHALLENGE_PRIVATE_KEY,
+                Some(ENCLAVE_CHALLENGE_PRIVATE_KEY),
+            ),
         ];
         let env_vars_to_unset = vec![ENV_SIGN_WORKER_ADDRESS];
 
         temp_env::with_vars(env_vars_to_set, || {
             temp_env::with_vars_unset(env_vars_to_unset, || {
-                assert_eq!(start(), 2, "Should return 2 if get_challenge fails due to missing signer address");
+                assert_eq!(
+                    start(),
+                    2,
+                    "Should return 2 if get_challenge fails due to missing signer address"
+                );
             });
         });
     }
@@ -114,7 +123,11 @@ mod pre_compute_start_tests {
 
         temp_env::with_vars(env_vars_to_set, || {
             temp_env::with_vars_unset(env_vars_to_unset, || {
-                assert_eq!(start(), 2, "Should return 2 if get_challenge fails due to missing private key");
+                assert_eq!(
+                    start(),
+                    2,
+                    "Should return 2 if get_challenge fails due to missing private key"
+                );
             });
         });
     }
@@ -135,16 +148,22 @@ mod pre_compute_start_tests {
             let env_vars = vec![
                 (ENV_IEXEC_TASK_ID, Some(CHAIN_TASK_ID)),
                 (ENV_SIGN_WORKER_ADDRESS, Some(WORKER_ADDRESS)),
-                (ENV_SIGN_TEE_CHALLENGE_PRIVATE_KEY, Some(ENCLAVE_CHALLENGE_PRIVATE_KEY)),
+                (
+                    ENV_SIGN_TEE_CHALLENGE_PRIVATE_KEY,
+                    Some(ENCLAVE_CHALLENGE_PRIVATE_KEY),
+                ),
                 (ENV_WORKER_HOST, Some(mock_server_addr_string.as_str())),
             ];
 
-            temp_env::with_vars(env_vars, || {
-                start()
-            })
-        }).await.expect("Blocking task panicked");
+            temp_env::with_vars(env_vars, || start())
+        })
+        .await
+        .expect("Blocking task panicked");
 
-        assert_eq!(result_code, 2, "Should return 2 if sending exit cause to worker API fails");
+        assert_eq!(
+            result_code, 2,
+            "Should return 2 if sending exit cause to worker API fails"
+        );
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -171,15 +190,21 @@ mod pre_compute_start_tests {
             let env_vars = vec![
                 (ENV_IEXEC_TASK_ID, Some(CHAIN_TASK_ID)),
                 (ENV_SIGN_WORKER_ADDRESS, Some(WORKER_ADDRESS)),
-                (ENV_SIGN_TEE_CHALLENGE_PRIVATE_KEY, Some(ENCLAVE_CHALLENGE_PRIVATE_KEY)),
+                (
+                    ENV_SIGN_TEE_CHALLENGE_PRIVATE_KEY,
+                    Some(ENCLAVE_CHALLENGE_PRIVATE_KEY),
+                ),
                 (ENV_WORKER_HOST, Some(mock_server_addr_string.as_str())),
             ];
 
-            temp_env::with_vars(env_vars, || {
-                start()
-            })
-        }).await.expect("Blocking task panicked");
+            temp_env::with_vars(env_vars, || start())
+        })
+        .await
+        .expect("Blocking task panicked");
 
-        assert_eq!(result_code, 1, "Should return 1 if sending exit cause to worker API succeeds");
+        assert_eq!(
+            result_code, 1,
+            "Should return 1 if sending exit cause to worker API succeeds"
+        );
     }
 }
