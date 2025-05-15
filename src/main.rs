@@ -1,5 +1,5 @@
 mod pre_compute;
-mod utils;
+mod api;
 
 fn main() {
     println!("Hello, world!");

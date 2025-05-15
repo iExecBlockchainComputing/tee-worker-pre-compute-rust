@@ -1,5 +1,5 @@
 use crate::pre_compute::errors::ReplicateStatusCause;
-use crate::utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable};
+use crate::pre_compute::utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable};
 use reqwest::header::AUTHORIZATION;
 use reqwest::{blocking::Client, Error};
 use serde::Serialize;
@@ -156,8 +156,8 @@ impl WorkerApiClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pre_compute::utils::env_utils::TeeSessionEnvironmentVariable::WORKER_HOST_ENV_VAR;
     use serde_json::{json, to_string};
-    use serial_test::serial;
     use temp_env::with_vars;
     use wiremock::{
         matchers::{body_json, header, method, path}, Mock, MockServer,
@@ -184,11 +184,10 @@ mod tests {
 
     // region get_worker_api_client
     #[test]
-    #[serial]
     fn should_get_worker_api_client_with_env_var() {
         with_vars(
             vec![(
-                TeeSessionEnvironmentVariable::WORKER_HOST_ENV_VAR.name(),
+                WORKER_HOST_ENV_VAR.name(),
                 Some("custom-worker-host:9999"),
             )],
             || {
@@ -199,10 +198,11 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn should_get_worker_api_client_without_env_var() {
-        let client = WorkerApiClient::from_env();
-        assert_eq!(client.base_url, format!("http://{}", DEFAULT_WORKER_HOST));
+        temp_env::with_vars_unset( vec![WORKER_HOST_ENV_VAR.name()] , || {
+            let client = WorkerApiClient::from_env();
+            assert_eq!(client.base_url, format!("http://{}", DEFAULT_WORKER_HOST));
+        });
     }
     // endregion
 
