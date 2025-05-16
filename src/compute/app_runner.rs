@@ -1,9 +1,32 @@
 use crate::api::worker_api::{ExitMessage, WorkerApiClient};
-use crate::compute::errors::{PreComputeError, ReplicateStatusCause};
-use crate::compute::signer::get_challenge;
-use crate::compute::utils::env_utils::TeeSessionEnvironmentVariable::IEXEC_TASK_ID;
-use crate::compute::utils::env_utils::get_env_var_or_error;
+use crate::compute::{
+    errors::{PreComputeError, ReplicateStatusCause},
+    signer::get_challenge,
+    utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable::IEXEC_TASK_ID},
+};
 use log::{error, info};
+
+/// Executes the pre-compute workflow.
+///
+/// This function orchestrates the full pre-compute process, handling environment
+/// variable checks, execution of the main pre-compute logic, and error reporting.
+/// It executes core operations and handles all the workflow states and transitions.
+///
+/// # Returns
+///
+/// * `i32` - An exit code indicating the result of the pre-compute process:
+///   - 0: Success - pre-compute completed successfully
+///   - 1: Failure with reported cause - pre-compute failed but the cause was reported
+///   - 2: Failure with unreported cause - pre-compute failed and the cause could not be reported
+///   - 3: Failure due to missing taskID context - pre-compute could not start due to missing task ID
+///
+/// # Example
+///
+/// ```
+/// use crate::app_runner::{start};
+///
+/// let exit_code = start();
+/// ```
 
 pub fn start() -> i32 {
     info!("TEE pre-compute started");
@@ -85,14 +108,14 @@ mod pre_compute_start_tests {
     const DEFAULT_WORKER_HOST: &str = "localhost:8080";
 
     #[test]
-    fn test_start_task_id_missing() {
+    fn start_fails_when_task_id_missing() {
         temp_env::with_vars_unset(vec![ENV_IEXEC_TASK_ID], || {
             assert_eq!(start(), 3, "Should return 3 if IEXEC_TASK_ID is missing");
         });
     }
 
     #[test]
-    fn test_start_run_fails_get_challenge_fails_signer_address_missing() {
+    fn start_fails_when_signer_address_missing() {
         let env_vars_to_set = vec![
             (ENV_IEXEC_TASK_ID, Some(CHAIN_TASK_ID)),
             (
@@ -114,7 +137,7 @@ mod pre_compute_start_tests {
     }
 
     #[test]
-    fn test_start_run_fails_get_challenge_fails_private_key_missing() {
+    fn start_fails_when_private_key_missing() {
         let env_vars_to_set = vec![
             (ENV_IEXEC_TASK_ID, Some(CHAIN_TASK_ID)),
             (ENV_SIGN_WORKER_ADDRESS, Some(WORKER_ADDRESS)),
@@ -133,7 +156,7 @@ mod pre_compute_start_tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_start_run_fails_get_challenge_succeeds_send_exit_cause_api_error() {
+    async fn start_fails_when_send_exit_cause_api_error() {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("POST"))
@@ -155,7 +178,7 @@ mod pre_compute_start_tests {
                 (ENV_WORKER_HOST, Some(mock_server_addr_string.as_str())),
             ];
 
-            temp_env::with_vars(env_vars, || start())
+            temp_env::with_vars(env_vars, start)
         })
         .await
         .expect("Blocking task panicked");
@@ -167,7 +190,7 @@ mod pre_compute_start_tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_start_run_fails_get_challenge_succeeds_send_exit_cause_api_success() {
+    async fn start_succeeds_when_send_exit_cause_api_success() {
         let mock_server = MockServer::start().await;
 
         let expected_cause_enum = ReplicateStatusCause::PreComputeFailedUnknownIssue;
@@ -197,7 +220,7 @@ mod pre_compute_start_tests {
                 (ENV_WORKER_HOST, Some(mock_server_addr_string.as_str())),
             ];
 
-            temp_env::with_vars(env_vars, || start())
+            temp_env::with_vars(env_vars, start)
         })
         .await
         .expect("Blocking task panicked");
