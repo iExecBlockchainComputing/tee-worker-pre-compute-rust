@@ -169,20 +169,24 @@ mod tests {
     // region ExitMessage()
     #[test]
     fn should_serialize_exit_message() {
-        let exit_message = ExitMessage::from(&PreComputeInvalidTeeSignature);
-        let serialized = to_string(&exit_message).expect("Failed to serialize");
-        let expected = format!("{{\"cause\":\"PreComputeInvalidTeeSignature\"}}");
-        assert_eq!(serialized, expected);
+        let causes = [
+            (
+                PreComputeInvalidTeeSignature,
+                "PreComputeInvalidTeeSignature",
+            ),
+            (
+                PreComputeWorkerAddressMissing,
+                "PreComputeWorkerAddressMissing",
+            ),
+            (PreComputeFailedUnknownIssue, "PreComputeFailedUnknownIssue"),
+        ];
 
-        let exit_message = ExitMessage::from(&PreComputeWorkerAddressMissing);
-        let serialized = to_string(&exit_message).expect("Failed to serialize");
-        let expected = format!("{{\"cause\":\"PreComputeWorkerAddressMissing\"}}");
-        assert_eq!(serialized, expected);
-
-        let exit_message = ExitMessage::from(&PreComputeFailedUnknownIssue);
-        let serialized = to_string(&exit_message).expect("Failed to serialize");
-        let expected = format!("{{\"cause\":\"PreComputeFailedUnknownIssue\"}}");
-        assert_eq!(serialized, expected);
+        for (cause, message) in causes {
+            let exit_message = ExitMessage::from(&cause);
+            let serialized = to_string(&exit_message).expect("Failed to serialize");
+            let expected = format!("{{\"cause\":\"{message}\"}}");
+            assert_eq!(serialized, expected);
+        }
     }
     // endregion
 

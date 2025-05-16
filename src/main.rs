@@ -1,6 +1,8 @@
+use std::process;
+
 mod api;
 mod compute;
 
 fn main() {
-    compute::app_runner::start();
+    process::exit(compute::app_runner::start());
 }
