@@ -27,7 +27,6 @@ use log::{error, info};
 ///
 /// let exit_code = start();
 /// ```
-
 pub fn start() -> i32 {
     info!("TEE pre-compute started");
 

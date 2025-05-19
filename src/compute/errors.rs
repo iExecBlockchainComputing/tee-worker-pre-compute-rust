@@ -5,14 +5,14 @@ use thiserror::Error;
 #[serde(rename_all(serialize = "SCREAMING_SNAKE_CASE"))]
 #[allow(clippy::enum_variant_names)]
 pub enum ReplicateStatusCause {
-    #[error("TEE challenge private key is missing")]
-    PreComputeTeeChallengePrivateKeyMissing,
+    #[error("Unexpected error occurred")]
+    PreComputeFailedUnknownIssue,
     #[error("Invalid TEE signature")]
     PreComputeInvalidTeeSignature,
-    #[error("Worker address is missing")]
-    PreComputeWorkerAddressMissing,
-    #[error("Task ID is missing")]
+    #[error("Task ID related environment variable is missing")]
     PreComputeTaskIdMissing,
-    #[error("Pre Compute failed due to an unknown issue")]
-    PreComputeFailedUnknownIssue,
+    #[error("TEE challenge private key related environment variable is missing")]
+    PreComputeTeeChallengePrivateKeyMissing,
+    #[error("Worker address related environment variable is missing")]
+    PreComputeWorkerAddressMissing,
 }

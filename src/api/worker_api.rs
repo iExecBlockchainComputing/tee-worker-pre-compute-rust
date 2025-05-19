@@ -29,7 +29,6 @@ use serde::Serialize;
 /// ```
 #[derive(Serialize, Debug)]
 pub struct ExitMessage<'a> {
-    #[serde(rename = "cause")]
     pub cause: &'a ReplicateStatusCause,
 }
 
