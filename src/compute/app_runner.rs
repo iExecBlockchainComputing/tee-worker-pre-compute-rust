@@ -1,8 +1,8 @@
 use crate::api::worker_api::{ExitMessage, WorkerApiClient};
 use crate::compute::{
-    errors::{PreComputeError, ReplicateStatusCause},
+    errors::ReplicateStatusCause,
     signer::get_challenge,
-    utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable::IEXEC_TASK_ID},
+    utils::env_utils::{TeeSessionEnvironmentVariable::IexecTaskId, get_env_var_or_error},
 };
 use log::{error, info};
 
@@ -31,9 +31,9 @@ use log::{error, info};
 pub fn start() -> i32 {
     info!("TEE pre-compute started");
 
-    let mut exit_cause = ReplicateStatusCause::PreComputeFailedUnknownIssue;
+    let exit_cause = ReplicateStatusCause::PreComputeFailedUnknownIssue;
     let chain_task_id =
-        match get_env_var_or_error(IEXEC_TASK_ID, ReplicateStatusCause::PreComputeTaskIdMissing) {
+        match get_env_var_or_error(IexecTaskId, ReplicateStatusCause::PreComputeTaskIdMissing) {
             Ok(id) => id,
             Err(e) => {
                 error!(
@@ -49,8 +49,7 @@ pub fn start() -> i32 {
             info!("TEE pre-compute completed");
             return 0;
         }
-        Err(e) => {
-            exit_cause = e.exit_cause().clone();
+        Err(exit_cause) => {
             error!(
                 "TEE pre-compute failed with known exit cause [{:?}]",
                 exit_cause
@@ -60,7 +59,7 @@ pub fn start() -> i32 {
 
     let authorization = match get_challenge(&chain_task_id) {
         Ok(auth) => auth,
-        Err(e) => {
+        Err(_) => {
             error!("Failed to sign exitCause message [{:?}]", exit_cause);
             return 2;
         }
@@ -76,17 +75,15 @@ pub fn start() -> i32 {
         &exit_message,
     ) {
         Ok(_) => 1,
-        Err(e) => {
+        Err(_) => {
             error!("Failed to report exitCause [{:?}]", exit_cause);
             2
         }
     }
 }
 
-pub fn run() -> Result<(), PreComputeError> {
-    Err(PreComputeError::new(
-        ReplicateStatusCause::PreComputeFailedUnknownIssue,
-    ))
+pub fn run() -> Result<(), ReplicateStatusCause> {
+    Err(ReplicateStatusCause::PreComputeFailedUnknownIssue)
 }
 
 #[cfg(test)]
@@ -105,7 +102,6 @@ mod pre_compute_start_tests {
     const ENV_SIGN_WORKER_ADDRESS: &str = "SIGN_WORKER_ADDRESS";
     const ENV_SIGN_TEE_CHALLENGE_PRIVATE_KEY: &str = "SIGN_TEE_CHALLENGE_PRIVATE_KEY";
     const ENV_WORKER_HOST: &str = "WORKER_HOST_ENV_VAR";
-    const DEFAULT_WORKER_HOST: &str = "localhost:8080";
 
     #[test]
     fn start_fails_when_task_id_missing() {
