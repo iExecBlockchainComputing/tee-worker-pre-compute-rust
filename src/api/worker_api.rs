@@ -29,7 +29,6 @@ use serde::Serialize;
 /// ```
 #[derive(Serialize, Debug)]
 pub struct ExitMessage<'a> {
-    #[serde(rename = "cause")]
     pub cause: &'a ReplicateStatusCause,
 }
 
@@ -84,7 +83,7 @@ impl WorkerApiClient {
     /// ```
     pub fn from_env() -> Self {
         let worker_host = get_env_var_or_error(
-            TeeSessionEnvironmentVariable::WORKER_HOST_ENV_VAR,
+            TeeSessionEnvironmentVariable::WorkerHostEnvVar,
             ReplicateStatusCause::PreComputeWorkerAddressMissing,
         )
         .unwrap_or_else(|_| DEFAULT_WORKER_HOST.to_string());
@@ -157,8 +156,7 @@ impl WorkerApiClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::compute::errors::ReplicateStatusCause::*;
-    use crate::compute::utils::env_utils::TeeSessionEnvironmentVariable::WORKER_HOST_ENV_VAR;
+    use crate::compute::utils::env_utils::TeeSessionEnvironmentVariable::WorkerHostEnvVar;
     use serde_json::{json, to_string};
     use temp_env::with_vars;
     use wiremock::{
@@ -171,14 +169,17 @@ mod tests {
     fn should_serialize_exit_message() {
         let causes = [
             (
-                PreComputeInvalidTeeSignature,
-                "PreComputeInvalidTeeSignature",
+                ReplicateStatusCause::PreComputeInvalidTeeSignature,
+                "PRE_COMPUTE_INVALID_TEE_SIGNATURE",
             ),
             (
-                PreComputeWorkerAddressMissing,
-                "PreComputeWorkerAddressMissing",
+                ReplicateStatusCause::PreComputeWorkerAddressMissing,
+                "PRE_COMPUTE_WORKER_ADDRESS_MISSING",
             ),
-            (PreComputeFailedUnknownIssue, "PreComputeFailedUnknownIssue"),
+            (
+                ReplicateStatusCause::PreComputeFailedUnknownIssue,
+                "PRE_COMPUTE_FAILED_UNKNOWN_ISSUE",
+            ),
         ];
 
         for (cause, message) in causes {
@@ -194,7 +195,7 @@ mod tests {
     #[test]
     fn should_get_worker_api_client_with_env_var() {
         with_vars(
-            vec![(WORKER_HOST_ENV_VAR.name(), Some("custom-worker-host:9999"))],
+            vec![(WorkerHostEnvVar.name(), Some("custom-worker-host:9999"))],
             || {
                 let client = WorkerApiClient::from_env();
                 assert_eq!(client.base_url, "http://custom-worker-host:9999");
@@ -204,7 +205,7 @@ mod tests {
 
     #[test]
     fn should_get_worker_api_client_without_env_var() {
-        temp_env::with_vars_unset(vec![WORKER_HOST_ENV_VAR.name()], || {
+        temp_env::with_vars_unset(vec![WorkerHostEnvVar.name()], || {
             let client = WorkerApiClient::from_env();
             assert_eq!(client.base_url, format!("http://{}", DEFAULT_WORKER_HOST));
         });

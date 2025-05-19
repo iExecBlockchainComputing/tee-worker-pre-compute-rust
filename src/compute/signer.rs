@@ -1,4 +1,4 @@
-use crate::compute::errors::{PreComputeError, ReplicateStatusCause};
+use crate::compute::errors::ReplicateStatusCause;
 use crate::compute::utils::env_utils::{TeeSessionEnvironmentVariable, get_env_var_or_error};
 use crate::compute::utils::hash_utils::{concatenate_and_hash, hex_string_to_byte_array};
 use alloy_signer::{Signature, SignerSync};
@@ -18,7 +18,7 @@ use alloy_signer_local::PrivateKeySigner;
 /// # Returns
 ///
 /// * `Ok(String)` - The signature as a hexadecimal string if successful
-/// * `Err(PreComputeError)` - An error if the private key is invalid or if signing fails
+/// * `Err(ReplicateStatusCause)` - An error if the private key is invalid or if signing fails
 ///
 /// # Errors
 ///
@@ -40,14 +40,14 @@ use alloy_signer_local::PrivateKeySigner;
 pub fn sign_enclave_challenge(
     message_hash: &str,
     enclave_challenge_private_key: &str,
-) -> Result<String, PreComputeError> {
+) -> Result<String, ReplicateStatusCause> {
     let signer: PrivateKeySigner = enclave_challenge_private_key
         .parse::<PrivateKeySigner>()
-        .map_err(|_| PreComputeError::new(ReplicateStatusCause::PreComputeWorkerAddressMissing))?;
+        .map_err(|_| ReplicateStatusCause::PreComputeWorkerAddressMissing)?;
 
     let signature: Signature = signer
         .sign_message_sync(&hex_string_to_byte_array(message_hash))
-        .map_err(|_| PreComputeError::new(ReplicateStatusCause::PreComputeInvalidTeeSignature))?;
+        .map_err(|_| ReplicateStatusCause::PreComputeInvalidTeeSignature)?;
 
     Ok(signature.to_string())
 }
@@ -65,7 +65,7 @@ pub fn sign_enclave_challenge(
 /// # Returns
 ///
 /// * `Ok(String)` - The challenge signature as a hexadecimal string if successful
-/// * `Err(PreComputeError)` - An error if required environment variables are missing or if signing fails
+/// * `Err(ReplicateStatusCause)` - An error if required environment variables are missing or if signing fails
 ///
 /// # Errors
 ///
@@ -93,14 +93,14 @@ pub fn sign_enclave_challenge(
 ///     Err(e) => eprintln!("Error generating challenge: {:?}", e),
 /// }
 /// ```
-pub fn get_challenge(chain_task_id: &str) -> Result<String, PreComputeError> {
+pub fn get_challenge(chain_task_id: &str) -> Result<String, ReplicateStatusCause> {
     let worker_address = get_env_var_or_error(
-        TeeSessionEnvironmentVariable::SIGN_WORKER_ADDRESS,
+        TeeSessionEnvironmentVariable::SignWorkerAddress,
         ReplicateStatusCause::PreComputeWorkerAddressMissing,
     )?;
 
     let tee_challenge_private_key = get_env_var_or_error(
-        TeeSessionEnvironmentVariable::SIGN_TEE_CHALLENGE_PRIVATE_KEY,
+        TeeSessionEnvironmentVariable::SignTeeChallengePrivateKey,
         ReplicateStatusCause::PreComputeTeeChallengePrivateKeyMissing,
     )?;
 
@@ -156,10 +156,7 @@ mod env_utils_tests {
             )],
             || {
                 let err = get_challenge(CHAIN_TASK_ID).unwrap_err();
-                assert_eq!(
-                    *err.exit_cause(),
-                    ReplicateStatusCause::PreComputeWorkerAddressMissing
-                );
+                assert_eq!(err, ReplicateStatusCause::PreComputeWorkerAddressMissing);
             },
         );
     }
@@ -169,7 +166,7 @@ mod env_utils_tests {
         with_vars(vec![("SIGN_WORKER_ADDRESS", Some(WORKER_ADDRESS))], || {
             let err = get_challenge(CHAIN_TASK_ID).unwrap_err();
             assert_eq!(
-                *err.exit_cause(),
+                err,
                 ReplicateStatusCause::PreComputeTeeChallengePrivateKeyMissing
             );
         });
