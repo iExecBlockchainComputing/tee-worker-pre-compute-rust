@@ -2,21 +2,47 @@ use crate::compute::errors::ReplicateStatusCause;
 use std::env;
 
 pub enum TeeSessionEnvironmentVariable {
+    IexecDatasetChecksum,
+    IexecDatasetFilename,
+    IexecDatasetKey,
+    IexecDatasetUrl,
+    IexecInputFileUrlPrefix(usize),
+    IexecInputFilesNumber,
+    IexecPreComputeOut,
     IexecTaskId,
-    SignWorkerAddress,
+    IsDatasetRequired,
     SignTeeChallengePrivateKey,
+    SignWorkerAddress,
     WorkerHostEnvVar,
 }
 
 impl TeeSessionEnvironmentVariable {
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> String {
         match self {
-            TeeSessionEnvironmentVariable::IexecTaskId => "IEXEC_TASK_ID",
-            TeeSessionEnvironmentVariable::SignWorkerAddress => "SIGN_WORKER_ADDRESS",
-            TeeSessionEnvironmentVariable::SignTeeChallengePrivateKey => {
-                "SIGN_TEE_CHALLENGE_PRIVATE_KEY"
+            TeeSessionEnvironmentVariable::IexecDatasetChecksum => {
+                "IEXEC_DATASET_CHECKSUM".to_string()
             }
-            TeeSessionEnvironmentVariable::WorkerHostEnvVar => "WORKER_HOST_ENV_VAR",
+            TeeSessionEnvironmentVariable::IexecDatasetFilename => {
+                "IEXEC_DATASET_FILE_NAME".to_string()
+            }
+            TeeSessionEnvironmentVariable::IexecDatasetKey => "IEXEC_DATASET_KEY".to_string(),
+            TeeSessionEnvironmentVariable::IexecDatasetUrl => "IEXEC_DATASET_URL".to_string(),
+            TeeSessionEnvironmentVariable::IexecInputFileUrlPrefix(index) => {
+                format!("IEXEC_INPUT_FILE_URL_{}", index)
+            }
+            TeeSessionEnvironmentVariable::IexecInputFilesNumber => {
+                "IEXEC_INPUT_FILE_NUMBER".to_string()
+            }
+            TeeSessionEnvironmentVariable::IexecPreComputeOut => {
+                "IEXEC_PRE_COMPUTE_OUT".to_string()
+            }
+            TeeSessionEnvironmentVariable::IexecTaskId => "IEXEC_TASK_ID".to_string(),
+            TeeSessionEnvironmentVariable::IsDatasetRequired => "IS_DATASET_REQUIRED".to_string(),
+            TeeSessionEnvironmentVariable::SignTeeChallengePrivateKey => {
+                "SIGN_TEE_CHALLENGE_PRIVATE_KEY".to_string()
+            }
+            TeeSessionEnvironmentVariable::SignWorkerAddress => "SIGN_WORKER_ADDRESS".to_string(),
+            TeeSessionEnvironmentVariable::WorkerHostEnvVar => "WORKER_HOST_ENV_VAR".to_string(),
         }
     }
 }
