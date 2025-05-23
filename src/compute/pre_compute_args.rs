@@ -1,5 +1,5 @@
 use crate::compute::errors::ReplicateStatusCause;
-use crate::compute::utils::env_utils::{get_env_var_or_error, TeeSessionEnvironmentVariable};
+use crate::compute::utils::env_utils::{TeeSessionEnvironmentVariable, get_env_var_or_error};
 
 /// Represents parameters required for pre-compute tasks in a Trusted Execution Environment (TEE).
 ///

@@ -23,6 +23,8 @@ pub enum ReplicateStatusCause {
     PreComputeIsDatasetRequiredMissing,
     #[error("Input files number related environment variable is missing")]
     PreComputeInputFilesNumberMissing,
+    #[error("Input files number related environment variable is missing")]
+    PreComputeOutputFolderNotFound,
     #[error("Output path related environment variable is missing")]
     PreComputeOutputPathMissing,
     #[error("Task ID related environment variable is missing")]
