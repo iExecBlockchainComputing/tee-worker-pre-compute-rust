@@ -27,7 +27,7 @@ impl PreComputeApp {
 impl PreComputeAppTrait for PreComputeApp {
     fn run(&mut self, chain_task_id: &str) -> Result<(), ReplicateStatusCause> {
         self.chain_task_id = Some(chain_task_id.to_string());
-        self.pre_compute_args = Some(PreComputeArgs::read_args(chain_task_id.to_string())?);
+        self.pre_compute_args = Some(PreComputeArgs::read_args()?);
         self.check_output_folder()?;
         Ok(())
     }
@@ -76,7 +76,6 @@ mod tests {
         let app = PreComputeApp {
             chain_task_id: Some(CHAIN_TASK_ID.to_string()),
             pre_compute_args: Some(PreComputeArgs {
-                chain_task_id: CHAIN_TASK_ID.to_string(),
                 output_dir: output_path,
                 is_dataset_required: false,
                 encrypted_dataset_url: None,
@@ -98,7 +97,6 @@ mod tests {
         let app = PreComputeApp {
             chain_task_id: Some(CHAIN_TASK_ID.to_string()),
             pre_compute_args: Some(PreComputeArgs {
-                chain_task_id: CHAIN_TASK_ID.to_string(),
                 output_dir: non_existing_path,
                 is_dataset_required: false,
                 encrypted_dataset_url: None,

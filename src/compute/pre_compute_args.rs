@@ -7,7 +7,6 @@ use crate::compute::utils::env_utils::{TeeSessionEnvironmentVariable, get_env_va
 /// providing a validated interface for subsequent computation phases.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PreComputeArgs {
-    pub chain_task_id: String,
     pub output_dir: String,
     // Dataset related fields
     pub is_dataset_required: bool,
@@ -21,9 +20,6 @@ pub struct PreComputeArgs {
 
 impl PreComputeArgs {
     /// Constructs a validated `PreComputeArgs` instance by reading and validating environment variables.
-    ///
-    /// # Arguments
-    /// * `chain_task_id` - The blockchain task ID passed directly from task context
     ///
     /// # Environment Variables
     /// This method reads the following environment variables:
@@ -53,7 +49,7 @@ impl PreComputeArgs {
     /// // Typically called with task ID from execution context
     /// let args = PreComputeArgs::read_args("task-1234".to_string())?;
     /// ```
-    pub fn read_args(chain_task_id: String) -> Result<Self, ReplicateStatusCause> {
+    pub fn read_args() -> Result<Self, ReplicateStatusCause> {
         let output_dir = get_env_var_or_error(
             TeeSessionEnvironmentVariable::IexecPreComputeOut,
             ReplicateStatusCause::PreComputeOutputPathMissing,
@@ -110,7 +106,6 @@ impl PreComputeArgs {
         }
 
         Ok(PreComputeArgs {
-            chain_task_id,
             output_dir,
             is_dataset_required,
             encrypted_dataset_url,
@@ -129,7 +124,6 @@ mod tests {
     use crate::compute::utils::env_utils::TeeSessionEnvironmentVariable::*;
     use std::collections::HashMap;
 
-    const CHAIN_TASK_ID: &str = "0xabc123";
     const OUTPUT_DIR: &str = "/iexec_out";
     const DATASET_URL: &str = "https://dataset.url";
     const DATASET_KEY: &str = "datasetKey123";
@@ -177,12 +171,11 @@ mod tests {
         env_vars.extend(setup_input_files_env_vars(1));
         env_vars.insert(IsDatasetRequired.name(), "false".to_string());
         temp_env::with_vars(to_temp_env_vars(env_vars), || {
-            let result = PreComputeArgs::read_args(CHAIN_TASK_ID.to_string());
+            let result = PreComputeArgs::read_args();
 
             assert!(result.is_ok());
             let args = result.unwrap();
 
-            assert_eq!(args.chain_task_id, CHAIN_TASK_ID);
             assert_eq!(args.output_dir, OUTPUT_DIR);
             assert!(!args.is_dataset_required);
             assert_eq!(args.encrypted_dataset_url, None);
@@ -202,12 +195,11 @@ mod tests {
         env_vars.extend(setup_dataset_env_vars());
 
         temp_env::with_vars(to_temp_env_vars(env_vars), || {
-            let result = PreComputeArgs::read_args(CHAIN_TASK_ID.to_string());
+            let result = PreComputeArgs::read_args();
 
             assert!(result.is_ok());
             let args = result.unwrap();
 
-            assert_eq!(args.chain_task_id, CHAIN_TASK_ID);
             assert_eq!(args.output_dir, OUTPUT_DIR);
             assert!(args.is_dataset_required);
             assert_eq!(args.encrypted_dataset_url, Some(DATASET_URL.to_string()));
@@ -236,12 +228,11 @@ mod tests {
         env_vars.extend(setup_input_files_env_vars(3));
 
         temp_env::with_vars(to_temp_env_vars(env_vars), || {
-            let result = PreComputeArgs::read_args(CHAIN_TASK_ID.to_string());
+            let result = PreComputeArgs::read_args();
 
             assert!(result.is_ok());
             let args = result.unwrap();
 
-            assert_eq!(args.chain_task_id, CHAIN_TASK_ID);
             assert_eq!(args.output_dir, OUTPUT_DIR);
             assert!(!args.is_dataset_required);
             assert_eq!(args.encrypted_dataset_url, None);
@@ -265,7 +256,7 @@ mod tests {
             env_vars.insert(IsDatasetRequired.name(), value_str.to_string());
 
             temp_env::with_vars(to_temp_env_vars(env_vars), || {
-                let result = PreComputeArgs::read_args(CHAIN_TASK_ID.to_string());
+                let result = PreComputeArgs::read_args();
                 assert!(result.is_ok());
                 let args = result.unwrap();
                 assert!(!args.is_dataset_required);
@@ -279,7 +270,7 @@ mod tests {
         env_vars.insert("IS_DATASET_REQUIRED".to_string(), "not-a-bool".to_string());
 
         temp_env::with_vars(to_temp_env_vars(env_vars), || {
-            let result = PreComputeArgs::read_args(CHAIN_TASK_ID.to_string());
+            let result = PreComputeArgs::read_args();
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err(),
@@ -298,7 +289,7 @@ mod tests {
         env_vars.insert(IsDatasetRequired.name(), "false".to_string());
 
         temp_env::with_vars(to_temp_env_vars(env_vars), || {
-            let result = PreComputeArgs::read_args(CHAIN_TASK_ID.to_string());
+            let result = PreComputeArgs::read_args();
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err(),
@@ -361,7 +352,7 @@ mod tests {
         env_vars.remove(&env_var.name());
 
         temp_env::with_vars(to_temp_env_vars(env_vars), || {
-            let result = PreComputeArgs::read_args(CHAIN_TASK_ID.to_string());
+            let result = PreComputeArgs::read_args();
             assert!(result.is_err());
             assert_eq!(result.unwrap_err(), error);
         });
