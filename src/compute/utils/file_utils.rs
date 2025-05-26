@@ -35,15 +35,15 @@ use std::path::{Path, PathBuf};
 /// - The downloaded content is fully loaded into memory before being written to disk.
 pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<PathBuf> {
     if url.is_empty() {
-        error!("Invalid file url");
+        error!("Invalid file url [url:{}]", url);
         return None;
     }
     if parent_dir.is_empty() {
-        error!("Invalid parent folder path");
+        error!("Invalid parent folder path [url:{}, path:{}]",url,parent_dir);
         return None;
     }
     if filename.is_empty() {
-        error!("Invalid output filename");
+        error!("Invalid output filename [fileUrl:{}, path:{}, outputFilename:{}]",url,parent_dir,filename);
         return None;
     }
 
