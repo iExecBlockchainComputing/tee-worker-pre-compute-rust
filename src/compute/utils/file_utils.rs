@@ -56,7 +56,7 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
     let parent_existed = parent_path.exists();
 
     if !parent_existed && fs::create_dir_all(parent_path).is_err() {
-        error!("Failed to create parent folder");
+        error!("Failed to create parent folder [fileUrl:{}, parentFolderPath:{}]",url,filename);
         return None;
     }
 
@@ -64,11 +64,11 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
 
     match fs::write(&file_path, bytes) {
         Ok(_) => {
-            info!("Downloaded data [file_path: {}]", file_path.display());
+            info!("Downloaded data [url:{}, file_path: {}]", url, file_path.display());
             Some(file_path)
         }
         Err(_) => {
-            error!("Failed to write file");
+            error!("Failed to write downloaded file to disk [url:{}, file_path:{}]",url, file_path.display());
             if !parent_existed {
                 let _ = fs::remove_dir_all(parent_path);
             }
