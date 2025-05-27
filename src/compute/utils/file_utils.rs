@@ -39,24 +39,42 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
         return None;
     }
     if parent_dir.is_empty() {
-        error!("Invalid parent folder path [url:{}, path:{}]",url,parent_dir);
+        error!(
+            "Invalid parent folder path [url:{}, parent_dir:{}]",
+            url, parent_dir
+        );
         return None;
     }
     if filename.is_empty() {
-        error!("Invalid output filename [fileUrl:{}, path:{}, outputFilename:{}]",url,parent_dir,filename);
+        error!(
+            "Invalid output filename [url:{}, parent_dir:{}, filename:{}]",
+            url, parent_dir, filename
+        );
         return None;
     }
 
-    let bytes = reqwest::blocking::get(url).ok()?.bytes().ok().or_else(|| {
-        error!("Failed to download file [url: {}]", url);
-        None
-    })?;
+    let bytes = match reqwest::blocking::get(url) {
+        Ok(response) => match response.bytes() {
+            Ok(b) => b,
+            Err(_) => {
+                error!("Failed to read file bytes from url [url:{}]", url);
+                return None;
+            }
+        },
+        Err(_) => {
+            error!("Failed to download file [url:{}]", url);
+            return None;
+        }
+    };
 
     let parent_path = Path::new(parent_dir);
     let parent_existed = parent_path.exists();
 
     if !parent_existed && fs::create_dir_all(parent_path).is_err() {
-        error!("Failed to create parent folder [fileUrl:{}, parentFolderPath:{}]",url,filename);
+        error!(
+            "Failed to create parent folder [url:{}, parent_dir:{}]",
+            url, parent_dir
+        );
         return None;
     }
 
@@ -64,13 +82,31 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
 
     match fs::write(&file_path, bytes) {
         Ok(_) => {
-            info!("Downloaded data [url:{}, file_path: {}]", url, file_path.display());
+            info!(
+                "Downloaded data [url:{}, file_path: {}]",
+                url,
+                file_path.display()
+            );
             Some(file_path)
         }
         Err(_) => {
-            error!("Failed to write downloaded file to disk [url:{}, file_path:{}]",url, file_path.display());
+            error!(
+                "Failed to write downloaded file to disk [url:{}, file_path:{}]",
+                url,
+                file_path.display()
+            );
             if !parent_existed {
-                let _ = fs::remove_dir_all(parent_path);
+                match fs::remove_dir_all(parent_path) {
+                    Ok(_) => {
+                        info!("Folder deleted [path:{}]", parent_path.display());
+                    }
+                    Err(_) => {
+                        error!(
+                            "Folder does not exist, nothing to delete [path:{}]",
+                            parent_path.display()
+                        );
+                    }
+                }
             }
             None
         }
