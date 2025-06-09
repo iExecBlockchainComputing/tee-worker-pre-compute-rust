@@ -50,6 +50,9 @@ impl PreComputeAppTrait for PreComputeApp {
     /// use crate::pre_compute_app::PreComputeApp;
     ///
     /// let pre_compute_app = PreComputeApp::new();
+    /// pre_compute_app.chain_task_id = Some("0x123456789abcdef");
+    /// pre_compute_app.pre_compute_args = Some(PreComputeArgs::read_args()?);
+    ///
     /// pre_compute_app.check_output_folder()?;
     /// ```
     fn check_output_folder(&self) -> Result<(), ReplicateStatusCause> {
@@ -101,6 +104,9 @@ impl PreComputeAppTrait for PreComputeApp {
     /// use crate::pre_compute_app::PreComputeApp;
     ///
     /// let pre_compute_app = PreComputeApp::new();
+    /// pre_compute_app.chain_task_id = Some("0x123456789abcdef");
+    /// pre_compute_app.pre_compute_args = Some(PreComputeArgs::read_args()?);
+    ///
     /// pre_compute_app.download_input_files()?;
     /// ```
     fn download_input_files(&self) -> Result<(), ReplicateStatusCause> {
