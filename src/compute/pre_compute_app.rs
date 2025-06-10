@@ -211,7 +211,7 @@ mod tests {
     }
 
     #[test]
-    fn download_input_files_success_with_single_file_multiple_files() {
+    fn download_input_files_success_with_multiple_files() {
         let temp_dir = TempDir::new().unwrap();
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
