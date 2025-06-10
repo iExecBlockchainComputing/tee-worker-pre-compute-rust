@@ -132,7 +132,7 @@ impl PreComputeAppTrait for PreComputeApp {
 mod tests {
     use super::*;
     use crate::compute::pre_compute_args::PreComputeArgs;
-    use tempfile::{TempDir, tempdir};
+    use tempfile::TempDir;
 
     const CHAIN_TASK_ID: &str = "0x123456789abcdef";
 
