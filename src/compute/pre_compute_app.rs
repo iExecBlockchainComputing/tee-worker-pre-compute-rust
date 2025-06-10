@@ -157,10 +157,10 @@ mod tests {
 
     #[test]
     fn check_output_folder_returns_ok_with_valid_args() {
-        let temp_dir = tempdir().unwrap();
-        let output_path = temp_dir.path().to_str().unwrap().to_string();
+        let temp_dir = TempDir::new().unwrap();
+        let output_path = temp_dir.path().to_str().unwrap();
 
-        let app = get_pre_compute_app(CHAIN_TASK_ID, vec![], &output_path);
+        let app = get_pre_compute_app(CHAIN_TASK_ID, vec![], output_path);
 
         let result = app.check_output_folder();
         assert!(result.is_ok());
