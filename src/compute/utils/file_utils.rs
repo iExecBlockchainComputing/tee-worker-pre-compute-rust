@@ -1,6 +1,14 @@
+use crate::compute::errors::ReplicateStatusCause;
 use log::{error, info};
+use reqwest::blocking::get;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+const IPFS_GATEWAYS: &[&str] = &[
+    "https://ipfs-gateway.v8-bellecour.iex.ec",
+    "https://gateway.ipfs.io",
+    "https://gateway.pinata.cloud",
+];
 
 /// Downloads a file from a given URL and writes it to a specified folder with a specified filename.
 ///
@@ -53,7 +61,7 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
         return None;
     }
 
-    let bytes = match reqwest::blocking::get(url) {
+    let bytes = match get(url) {
         Ok(response) => match response.bytes() {
             Ok(b) => b,
             Err(_) => {
@@ -111,6 +119,22 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
             None
         }
     }
+}
+
+pub fn download_from_ipfs_gateways(url: &str) -> Result<Vec<u8>, ReplicateStatusCause> {
+    for gateway in IPFS_GATEWAYS {
+        let full_url = format!("{}{}", gateway, url);
+        info!("Attempting to download dataset from {}", full_url);
+
+        match get(&full_url).and_then(|response| response.bytes()) {
+            Ok(bytes) => return Ok(bytes.to_vec()),
+            Err(e) => {
+                info!("Failed to download from {}: {}", full_url, e);
+                continue;
+            }
+        }
+    }
+    Err(ReplicateStatusCause::PreComputeDatasetDownloadFailed)
 }
 
 #[cfg(test)]

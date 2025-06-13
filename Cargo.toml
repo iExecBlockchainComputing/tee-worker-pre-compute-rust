@@ -6,8 +6,11 @@ edition = "2024"
 [dependencies]
 alloy-signer = "0.15.9"
 alloy-signer-local = "0.15.9"
+base64 = "0.22.1"
 log = "0.4.27"
 mockall = "0.13.1"
+multiaddr = "0.18.2"
+openssl = "0.10.73"
 reqwest = { version = "0.12.15", features = ["blocking", "json"] }
 serde = "1.0.219"
 sha256 = "1.6.0"
