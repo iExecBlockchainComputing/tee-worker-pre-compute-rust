@@ -4,12 +4,6 @@ use reqwest::blocking::get;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const IPFS_GATEWAYS: &[&str] = &[
-    "https://ipfs-gateway.v8-bellecour.iex.ec",
-    "https://gateway.ipfs.io",
-    "https://gateway.pinata.cloud",
-];
-
 /// Downloads a file from a given URL and writes it to a specified folder with a specified filename.
 ///
 /// If the download or any file operation fails, the function logs an appropriate error
@@ -121,12 +115,18 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
     }
 }
 
-pub fn download_from_ipfs_gateways(url: &str) -> Result<Vec<u8>, ReplicateStatusCause> {
-    for gateway in IPFS_GATEWAYS {
+pub fn download_from_ipfs_gateways(
+    url: &str,
+    gateways: &[&str],
+) -> Result<Vec<u8>, ReplicateStatusCause> {
+    for gateway in gateways {
         let full_url = format!("{}{}", gateway, url);
         info!("Attempting to download dataset from {}", full_url);
 
-        match get(&full_url).and_then(|response| response.bytes()) {
+        match get(&full_url)
+            .and_then(|response| response.error_for_status())
+            .and_then(|response| response.bytes())
+        {
             Ok(bytes) => return Ok(bytes.to_vec()),
             Err(e) => {
                 info!("Failed to download from {}: {}", full_url, e);
@@ -141,11 +141,14 @@ pub fn download_from_ipfs_gateways(url: &str) -> Result<Vec<u8>, ReplicateStatus
 mod tests {
     use super::*;
     use tempfile::TempDir;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     const URL: &str = "https://httpbin.org/json";
     const PARENT_DIR: &str = "/tmp";
     const FILE_NAME: &str = "test.json";
 
+    // region download_file
     #[test]
     fn test_empty_url() {
         assert!(download_file("", PARENT_DIR, FILE_NAME).is_none());
@@ -195,4 +198,127 @@ mod tests {
             assert!(nested_path.exists());
         }
     }
+    // endregion
+
+    // region download_from_ipfs_gateways
+    #[test]
+    fn test_download_success_first_gateway() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let expected_data = b"test data";
+
+        let mock_server = rt.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/test"))
+                .respond_with(ResponseTemplate::new(200).set_body_bytes(expected_data))
+                .mount(&server)
+                .await;
+            server
+        });
+
+        let server_uri = mock_server.uri();
+        let gateways = &[server_uri.as_str()];
+
+        let result = download_from_ipfs_gateways("/test", gateways);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), expected_data);
+    }
+
+    #[test]
+    fn test_download_failover_to_second_gateway() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let expected_data = b"data from the second gateway";
+
+        let (server1_uri, server2_uri) = rt.block_on(async {
+            let server1 = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/test"))
+                .respond_with(ResponseTemplate::new(500))
+                .mount(&server1)
+                .await;
+
+            let server2 = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/test"))
+                .respond_with(ResponseTemplate::new(200).set_body_bytes(expected_data))
+                .mount(&server2)
+                .await;
+
+            (server1.uri(), server2.uri())
+        });
+
+        let gateways = &[server1_uri.as_str(), server2_uri.as_str()];
+        let result = download_from_ipfs_gateways("/test", gateways);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), expected_data);
+    }
+
+    #[test]
+    fn test_download_all_gateways_fail() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+
+        let (server1_uri, server2_uri) = rt.block_on(async {
+            let server1 = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/test"))
+                .respond_with(ResponseTemplate::new(500))
+                .mount(&server1)
+                .await;
+
+            let server2 = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/test"))
+                .respond_with(ResponseTemplate::new(404))
+                .mount(&server2)
+                .await;
+
+            (server1.uri(), server2.uri())
+        });
+
+        let gateways = &[server1_uri.as_str(), server2_uri.as_str()];
+        let result = download_from_ipfs_gateways("/test", gateways);
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            ReplicateStatusCause::PreComputeDatasetDownloadFailed
+        );
+    }
+
+    #[test]
+    fn test_download_success_with_empty_body() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+
+        let mock_server = rt.block_on(async {
+            let server = MockServer::start().await;
+            Mock::given(method("GET"))
+                .and(path("/test"))
+                .respond_with(ResponseTemplate::new(200).set_body_bytes(b""))
+                .mount(&server)
+                .await;
+            server
+        });
+
+        let server_uri = mock_server.uri();
+        let gateways = &[server_uri.as_str()];
+        let result = download_from_ipfs_gateways("/test", gateways);
+
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_download_with_empty_gateway_list() {
+        let gateways: &[&str] = &[];
+        let result = download_from_ipfs_gateways("/test", gateways);
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            ReplicateStatusCause::PreComputeDatasetDownloadFailed
+        );
+    }
+    // endregion
 }

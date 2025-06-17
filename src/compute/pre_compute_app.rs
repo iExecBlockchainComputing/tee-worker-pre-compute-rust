@@ -4,6 +4,7 @@ use crate::compute::utils::file_utils::{download_file, download_from_ipfs_gatewa
 use crate::compute::utils::hash_utils::{sha256, sha256_from_bytes};
 use base64::{Engine, engine::general_purpose};
 use log::{error, info};
+#[cfg(test)]
 use mockall::automock;
 use multiaddr::Multiaddr;
 use openssl::symm::{Cipher, decrypt};
@@ -12,7 +13,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-#[automock]
+const IPFS_GATEWAYS: &[&str] = &[
+    "https://ipfs-gateway.v8-bellecour.iex.ec",
+    "https://gateway.ipfs.io",
+    "https://gateway.pinata.cloud",
+];
+
+#[cfg_attr(test, automock)]
 pub trait PreComputeAppTrait {
     fn run(&mut self, chain_task_id: &str) -> Result<(), ReplicateStatusCause>;
     fn check_output_folder(&self) -> Result<(), ReplicateStatusCause>;
@@ -179,7 +186,7 @@ impl PreComputeAppTrait for PreComputeApp {
         );
 
         let encrypted_content = if is_multi_address(encrypted_dataset_url) {
-            download_from_ipfs_gateways(encrypted_dataset_url)?
+            download_from_ipfs_gateways(encrypted_dataset_url, IPFS_GATEWAYS)?
         } else {
             get(encrypted_dataset_url)
                 .and_then(|response| response.bytes())
@@ -376,6 +383,7 @@ mod tests {
         }
     }
 
+    // region check_output_folder
     #[test]
     fn check_output_folder_returns_ok_with_valid_args() {
         let temp_dir = TempDir::new().unwrap();
@@ -413,7 +421,9 @@ mod tests {
             Err(ReplicateStatusCause::PreComputeOutputFolderNotFound)
         );
     }
+    // endregion
 
+    // region download_input_files
     #[test]
     fn download_input_files_success_with_single_file() {
         let temp_dir = TempDir::new().unwrap();
@@ -493,7 +503,9 @@ mod tests {
         let xml_hash = sha256("https://httpbin.org/xml".to_string());
         assert!(!temp_dir.path().join(xml_hash).exists());
     }
+    // endregion
 
+    // region download_encrypted_dataset
     #[test]
     fn download_encrypted_dataset_success_with_valid_dataset_url() {
         let app = get_pre_compute_app(CHAIN_TASK_ID, vec![], "");
@@ -554,7 +566,9 @@ mod tests {
         let expected_content = Err(ReplicateStatusCause::PreComputeInvalidDatasetChecksum);
         assert_eq!(actual_content, expected_content);
     }
+    // endregion
 
+    // region decrypt_dataset
     #[test]
     fn decrypt_dataset_success_with_valid_dataset() {
         let app = get_pre_compute_app(CHAIN_TASK_ID, vec![], "");
@@ -580,7 +594,9 @@ mod tests {
             Err(ReplicateStatusCause::PreComputeDatasetDecryptionFailed)
         );
     }
+    // endregion
 
+    // region save_plain_dataset_file
     #[test]
     fn save_plain_dataset_file_success_with_valid_output_dir() {
         let temp_dir = TempDir::new().unwrap();
@@ -624,4 +640,5 @@ mod tests {
             Err(ReplicateStatusCause::PreComputeSavingPlainDatasetFailed)
         );
     }
+    // endregion
 }
