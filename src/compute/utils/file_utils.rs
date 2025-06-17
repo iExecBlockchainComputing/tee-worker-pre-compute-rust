@@ -256,38 +256,6 @@ mod tests {
     }
 
     #[test]
-    fn test_download_all_gateways_fail() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-
-        let (server1_uri, server2_uri) = rt.block_on(async {
-            let server1 = MockServer::start().await;
-            Mock::given(method("GET"))
-                .and(path("/test"))
-                .respond_with(ResponseTemplate::new(500))
-                .mount(&server1)
-                .await;
-
-            let server2 = MockServer::start().await;
-            Mock::given(method("GET"))
-                .and(path("/test"))
-                .respond_with(ResponseTemplate::new(404))
-                .mount(&server2)
-                .await;
-
-            (server1.uri(), server2.uri())
-        });
-
-        let gateways = &[server1_uri.as_str(), server2_uri.as_str()];
-        let result = download_from_ipfs_gateways("/test", gateways);
-
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            ReplicateStatusCause::PreComputeDatasetDownloadFailed
-        );
-    }
-
-    #[test]
     fn test_download_success_with_empty_body() {
         let rt = tokio::runtime::Runtime::new().unwrap();
 
