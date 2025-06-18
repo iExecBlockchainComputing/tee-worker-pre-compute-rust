@@ -141,6 +141,9 @@ pub fn download_from_ipfs_gateways(
 mod tests {
     use super::*;
     use tempfile::TempDir;
+    use testcontainers::core::{IntoContainerPort};
+    use testcontainers::{GenericImage, ImageExt};
+    use testcontainers::runners::SyncRunner;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -172,12 +175,23 @@ mod tests {
 
     #[test]
     fn test_successful_download() {
-        let result = download_file(URL, PARENT_DIR, FILE_NAME);
+        let container = GenericImage::new("kennethreitz/httpbin", "latest")
+            .with_exposed_port(80.tcp())
+            .with_network("bridge")
+            .with_env_var("DEBUG", "1")
+            .start()
+            .expect("Failed to start Httpbin");
+
+        let container_url = format!("http://127.0.0.1:80/bytes/1024"); // Or /json, or /anything, etc.
+
+        let result = download_file(&container_url, PARENT_DIR, FILE_NAME); // Assuming download_file takes &str
+
 
         if let Some(path) = result {
             assert!(path.exists());
             assert!(path.is_file());
             let content = fs::read_to_string(&path).unwrap();
+            println!("the content is here : {}", content);
             assert!(content.contains("slideshow"));
         }
     }
