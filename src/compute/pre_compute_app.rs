@@ -166,19 +166,9 @@ impl PreComputeAppTrait for PreComputeApp {
     /// app.download_encrypted_dataset()?;
     /// ```
     fn download_encrypted_dataset(&self) -> Result<Vec<u8>, ReplicateStatusCause> {
-        // TODO: Refine error handling to return specific causes for missing pre-compute arguments.
-        let args = self
-            .pre_compute_args
-            .as_ref()
-            .ok_or(ReplicateStatusCause::PreComputeDatasetDownloadFailed)?;
-        let chain_task_id = self
-            .chain_task_id
-            .as_ref()
-            .ok_or(ReplicateStatusCause::PreComputeDatasetDownloadFailed)?;
-        let encrypted_dataset_url = args
-            .encrypted_dataset_url
-            .as_ref()
-            .ok_or(ReplicateStatusCause::PreComputeDatasetDownloadFailed)?;
+        let args = self.pre_compute_args.as_ref().unwrap();
+        let chain_task_id = self.chain_task_id.as_ref().unwrap();
+        let encrypted_dataset_url = args.encrypted_dataset_url.as_ref().unwrap();
 
         info!(
             "Downloading encrypted dataset file [chainTaskId: {}, url: {}]",
@@ -241,14 +231,13 @@ impl PreComputeAppTrait for PreComputeApp {
     /// let decrypted = app.decrypt_dataset(&encrypted)?;
     /// ```
     fn decrypt_dataset(&self, encrypted_content: &[u8]) -> Result<Vec<u8>, ReplicateStatusCause> {
-        // TODO: Refine error handling to return specific causes for missing pre-compute arguments.
-        let base64_key = match &self.pre_compute_args {
-            Some(args) => match &args.encrypted_dataset_base64_key {
-                Some(k) => k,
-                None => return Err(ReplicateStatusCause::PreComputeDatasetDecryptionFailed),
-            },
-            None => return Err(ReplicateStatusCause::PreComputeDatasetDecryptionFailed),
-        };
+        let base64_key = self
+            .pre_compute_args
+            .as_ref()
+            .unwrap()
+            .encrypted_dataset_base64_key
+            .as_ref()
+            .unwrap();
 
         let key = general_purpose::STANDARD
             .decode(base64_key)
@@ -262,8 +251,6 @@ impl PreComputeAppTrait for PreComputeApp {
         let ciphertext = &encrypted_content[16..];
 
         let cipher = match key.len() {
-            16 => Cipher::aes_128_cbc(),
-            24 => Cipher::aes_192_cbc(),
             32 => Cipher::aes_256_cbc(),
             _ => return Err(ReplicateStatusCause::PreComputeDatasetDecryptionFailed),
         };
@@ -296,20 +283,10 @@ impl PreComputeAppTrait for PreComputeApp {
     /// app.save_plain_dataset_file(&plain_data)?;
     /// ```
     fn save_plain_dataset_file(&self, plain_dataset: &[u8]) -> Result<(), ReplicateStatusCause> {
-        // TODO: Refine error handling to return specific causes for missing pre-compute arguments.
-        let chain_task_id = self
-            .chain_task_id
-            .as_ref()
-            .ok_or(ReplicateStatusCause::PreComputeSavingPlainDatasetFailed)?;
-        let args = self
-            .pre_compute_args
-            .as_ref()
-            .ok_or(ReplicateStatusCause::PreComputeSavingPlainDatasetFailed)?;
+        let chain_task_id = self.chain_task_id.as_ref().unwrap();
+        let args = self.pre_compute_args.as_ref().unwrap();
         let output_dir = &args.output_dir;
-        let plain_dataset_filename = args
-            .plain_dataset_filename
-            .as_ref()
-            .ok_or(ReplicateStatusCause::PreComputeSavingPlainDatasetFailed)?;
+        let plain_dataset_filename = args.plain_dataset_filename.as_ref().unwrap();
 
         let mut path = PathBuf::from(output_dir);
         path.push(plain_dataset_filename);
