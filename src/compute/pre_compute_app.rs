@@ -1,6 +1,6 @@
 use crate::compute::errors::ReplicateStatusCause;
 use crate::compute::pre_compute_args::PreComputeArgs;
-use crate::compute::utils::file_utils::{download_file, download_from_ipfs_gateways};
+use crate::compute::utils::file_utils::{download_file, download_from_url};
 use crate::compute::utils::hash_utils::{sha256, sha256_from_bytes};
 use base64::{Engine, engine::general_purpose};
 use log::{error, info};
@@ -8,7 +8,6 @@ use log::{error, info};
 use mockall::automock;
 use multiaddr::Multiaddr;
 use openssl::symm::{Cipher, decrypt};
-use reqwest::blocking::get;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -176,13 +175,22 @@ impl PreComputeAppTrait for PreComputeApp {
         );
 
         let encrypted_content = if is_multi_address(encrypted_dataset_url) {
-            download_from_ipfs_gateways(encrypted_dataset_url, IPFS_GATEWAYS)?
+            IPFS_GATEWAYS.iter().find_map(|gateway| {
+                let full_url = format!("{}{}", gateway, encrypted_dataset_url);
+                info!("Attempting to download dataset from {}", full_url);
+
+                if let Some(content) = download_from_url(&full_url) {
+                    info!("Successfully downloaded from {}", full_url);
+                    Some(content)
+                } else {
+                    info!("Failed to download from {}", full_url);
+                    None
+                }
+            })
         } else {
-            get(encrypted_dataset_url)
-                .and_then(|response| response.bytes())
-                .map(|bytes| bytes.to_vec())
-                .map_err(|_| ReplicateStatusCause::PreComputeDatasetDownloadFailed)?
-        };
+            download_from_url(encrypted_dataset_url)
+        }
+        .ok_or(ReplicateStatusCause::PreComputeDatasetDownloadFailed)?;
 
         info!(
             "Checking encrypted dataset checksum [chainTaskId: {}]",
@@ -488,10 +496,8 @@ mod tests {
         let app = get_pre_compute_app(CHAIN_TASK_ID, vec![], "");
 
         let actual_content = app.download_encrypted_dataset();
-        let expected_content = get(HTTP_DATASET_URL)
-            .and_then(|response| response.bytes())
-            .map(|bytes| bytes.to_vec())
-            .map_err(|_| ReplicateStatusCause::PreComputeDatasetDownloadFailed);
+        let expected_content = download_from_url(HTTP_DATASET_URL)
+            .ok_or(ReplicateStatusCause::PreComputeDatasetDownloadFailed);
         assert_eq!(actual_content, expected_content);
     }
 

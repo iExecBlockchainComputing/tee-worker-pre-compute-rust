@@ -1,4 +1,3 @@
-use crate::compute::errors::ReplicateStatusCause;
 use log::{error, info};
 use reqwest::blocking::get;
 use std::fs;
@@ -55,15 +54,9 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
         return None;
     }
 
-    let bytes = match get(url) {
-        Ok(response) => match response.bytes() {
-            Ok(b) => b,
-            Err(_) => {
-                error!("Failed to read file bytes from url [url:{}]", url);
-                return None;
-            }
-        },
-        Err(_) => {
+    let bytes = match download_from_url(url) {
+        Some(b) => b,
+        None => {
             error!("Failed to download file [url:{}]", url);
             return None;
         }
@@ -115,26 +108,55 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
     }
 }
 
-pub fn download_from_ipfs_gateways(
-    url: &str,
-    gateways: &[&str],
-) -> Result<Vec<u8>, ReplicateStatusCause> {
-    for gateway in gateways {
-        let full_url = format!("{}{}", gateway, url);
-        info!("Attempting to download dataset from {}", full_url);
+/// Downloads the content from the given URL and returns it as a byte vector.
+///
+/// This function supports any HTTP/HTTPS URL, including IPFS gateway URLs.
+/// It performs a blocking GET request and returns the full response body as bytes.
+///
+/// # Arguments
+///
+/// * `url` - The URL to download from. Must not be empty.
+///
+/// # Returns
+///
+/// * `Some(Vec<u8>)` if the download succeeds and the response body is read successfully.
+/// * `None` if the URL is empty, the request fails, or the response status is not successful.
+///
+/// # Example
+///
+/// ```
+/// if let Some(bytes) = download_from_url("https://httpbin.org/json/test.json") {
+///     println!("Downloaded {} bytes", bytes.len());
+/// } else {
+///     println!("Download failed");
+/// }
+/// ```
+///
+/// # Notes
+///
+/// - This function uses blocking I/O and is not suitable for async contexts.
+/// - The entire response body is loaded into memory.
+pub fn download_from_url(url: &str) -> Option<Vec<u8>> {
+    if url.is_empty() {
+        error!("Invalid URL: empty string");
+        return None;
+    }
 
-        match get(&full_url)
-            .and_then(|response| response.error_for_status())
-            .and_then(|response| response.bytes())
-        {
-            Ok(bytes) => return Ok(bytes.to_vec()),
-            Err(e) => {
-                info!("Failed to download from {}: {}", full_url, e);
-                continue;
-            }
+    info!("Attempting to download from {}", url);
+
+    match get(url)
+        .and_then(|response| response.error_for_status())
+        .and_then(|response| response.bytes())
+    {
+        Ok(bytes) => {
+            info!("Successfully downloaded {} bytes from {}", bytes.len(), url);
+            Some(bytes.to_vec())
+        }
+        Err(e) => {
+            error!("Failed to download from {}: {}", url, e);
+            None
         }
     }
-    Err(ReplicateStatusCause::PreComputeDatasetDownloadFailed)
 }
 
 #[cfg(test)]
@@ -200,9 +222,9 @@ mod tests {
     }
     // endregion
 
-    // region download_from_ipfs_gateways
+    // region download_from_url
     #[test]
-    fn test_download_success_first_gateway() {
+    fn test_download_from_url_success() {
         let rt = tokio::runtime::Runtime::new().unwrap();
         let expected_data = b"test data";
 
@@ -217,76 +239,42 @@ mod tests {
         });
 
         let server_uri = mock_server.uri();
-        let gateways = &[server_uri.as_str()];
+        let result = download_from_url(&format!("{}/test", server_uri));
 
-        let result = download_from_ipfs_gateways("/test", gateways);
-
-        assert!(result.is_ok());
+        assert!(result.is_some());
         assert_eq!(result.unwrap(), expected_data);
     }
 
     #[test]
-    fn test_download_failover_to_second_gateway() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let expected_data = b"data from the second gateway";
-
-        let (server1_uri, server2_uri) = rt.block_on(async {
-            let server1 = MockServer::start().await;
-            Mock::given(method("GET"))
-                .and(path("/test"))
-                .respond_with(ResponseTemplate::new(500))
-                .mount(&server1)
-                .await;
-
-            let server2 = MockServer::start().await;
-            Mock::given(method("GET"))
-                .and(path("/test"))
-                .respond_with(ResponseTemplate::new(200).set_body_bytes(expected_data))
-                .mount(&server2)
-                .await;
-
-            (server1.uri(), server2.uri())
-        });
-
-        let gateways = &[server1_uri.as_str(), server2_uri.as_str()];
-        let result = download_from_ipfs_gateways("/test", gateways);
-
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), expected_data);
+    fn test_download_from_url_with_empty_url() {
+        let result = download_from_url("");
+        assert!(result.is_none());
     }
 
     #[test]
-    fn test_download_success_with_empty_body() {
+    fn test_download_from_url_with_invalid_url() {
+        let result = download_from_url("not-a-valid-url");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_download_from_url_with_server_error() {
         let rt = tokio::runtime::Runtime::new().unwrap();
 
         let mock_server = rt.block_on(async {
             let server = MockServer::start().await;
             Mock::given(method("GET"))
-                .and(path("/test"))
-                .respond_with(ResponseTemplate::new(200).set_body_bytes(b""))
+                .and(path("/error"))
+                .respond_with(ResponseTemplate::new(500))
                 .mount(&server)
                 .await;
             server
         });
 
         let server_uri = mock_server.uri();
-        let gateways = &[server_uri.as_str()];
-        let result = download_from_ipfs_gateways("/test", gateways);
+        let result = download_from_url(&format!("{}/error", server_uri));
 
-        assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
-    }
-
-    #[test]
-    fn test_download_with_empty_gateway_list() {
-        let gateways: &[&str] = &[];
-        let result = download_from_ipfs_gateways("/test", gateways);
-
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            ReplicateStatusCause::PreComputeDatasetDownloadFailed
-        );
+        assert!(result.is_none());
     }
     // endregion
 }
