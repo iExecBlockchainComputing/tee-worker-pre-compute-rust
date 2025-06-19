@@ -182,18 +182,42 @@ mod tests {
             .start()
             .expect("Failed to start Httpbin");
 
-        let container_url = format!("http://127.0.0.1:80/bytes/1024"); // Or /json, or /anything, etc.
+        // Use the mapped host port instead of assuming it's 80
+        let port = container.get_host_port_ipv4(80).expect("Could not get host port");
+        let container_url = format!("http://127.0.0.1:{}/json", port);
+        println!("Testing download from URL: {}", container_url);
 
-        let result = download_file(&container_url, PARENT_DIR, FILE_NAME); // Assuming download_file takes &str
+        // Add a small delay to ensure container is ready
+        std::thread::sleep(std::time::Duration::from_millis(1000));
 
-
-        if let Some(path) = result {
-            assert!(path.exists());
-            assert!(path.is_file());
-            let content = fs::read_to_string(&path).unwrap();
-            println!("the content is here : {}", content);
-            assert!(content.contains("slideshow"));
+        // Test the URL directly first
+        match reqwest::blocking::get(&container_url) {
+            Ok(response) => {
+                println!("Direct URL test successful, status: {}", response.status());
+            }
+            Err(e) => {
+                println!("Direct URL test failed: {}", e);
+                panic!("Container URL is not accessible");
+            }
         }
+
+        let result = download_file(&container_url, PARENT_DIR, FILE_NAME);
+        println!("Download result: {:?}", result);
+        
+        // Assert that the download was successful
+        let path = result.expect("Download should succeed");
+        assert!(path.exists());
+        assert!(path.is_file());
+        
+        let content = fs::read_to_string(&path).unwrap();
+        println!("Downloaded content: {}", content);
+        
+        // Check that it's valid JSON by looking for expected JSON structure
+        assert!(content.contains("\"slideshow\""));
+        assert!(content.contains("\"slides\""));
+        
+        // Clean up the downloaded file
+        let _ = fs::remove_file(&path);
     }
 
     #[test]
