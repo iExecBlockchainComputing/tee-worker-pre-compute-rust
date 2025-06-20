@@ -41,6 +41,10 @@ pub fn sha256(input: String) -> String {
     format!("0x{}", digest(input))
 }
 
+pub fn sha256_from_bytes(bytes: &[u8]) -> String {
+    format!("0x{}", digest(bytes))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
