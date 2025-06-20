@@ -1,6 +1,6 @@
 use crate::compute::errors::ReplicateStatusCause;
 use crate::compute::pre_compute_args::PreComputeArgs;
-use crate::compute::utils::file_utils::{download_file, download_from_url};
+use crate::compute::utils::file_utils::{download_file, download_from_url, write_file};
 use crate::compute::utils::hash_utils::{sha256, sha256_from_bytes};
 use base64::{Engine, engine::general_purpose};
 use log::{error, info};
@@ -8,7 +8,6 @@ use log::{error, info};
 use mockall::automock;
 use multiaddr::Multiaddr;
 use openssl::symm::{Cipher, decrypt};
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -305,29 +304,26 @@ impl PreComputeAppTrait for PreComputeApp {
             path.display()
         );
 
-        match fs::write(&path, plain_dataset) {
-            Ok(_) => {
-                info!(
-                    "Saving plain dataset file [chainTaskId:{}, path:{}]",
-                    chain_task_id,
-                    path.display()
-                );
-            }
-            Err(_) => {
-                error!(
-                    "Failed to write plain dataset file [chainTaskId:{}, path:{}]",
-                    chain_task_id,
-                    path.display()
-                );
-                return Err(ReplicateStatusCause::PreComputeSavingPlainDatasetFailed);
-            }
+        if write_file(
+            plain_dataset,
+            &path,
+            &format!("chainTaskId:{}", chain_task_id),
+        )
+        .is_ok()
+        {
+            info!(
+                "Saved plain dataset file to disk [chain_task_id: {}]",
+                chain_task_id
+            );
+            Ok(())
+        } else {
+            error!(
+                "Failed to write plain dataset file [chainTaskId:{}, path:{}]",
+                chain_task_id,
+                path.display()
+            );
+            Err(ReplicateStatusCause::PreComputeSavingPlainDatasetFailed)
         }
-
-        info!(
-            "Saved plain dataset file to disk [chain_task_id: {}]",
-            chain_task_id
-        );
-        Ok(())
     }
 }
 
@@ -339,6 +335,7 @@ fn is_multi_address(uri: &str) -> bool {
 mod tests {
     use super::*;
     use crate::compute::pre_compute_args::PreComputeArgs;
+    use std::fs;
     use tempfile::TempDir;
 
     const CHAIN_TASK_ID: &str = "0x123456789abcdef";
