@@ -300,7 +300,7 @@ impl PreComputeAppTrait for PreComputeApp {
         path.push(plain_dataset_filename);
 
         info!(
-            "Saving plain dataset file [chain_task_id: {}, path: {}]",
+            "Saving plain dataset file [chain_task_id:{}, path:{}]",
             chain_task_id,
             path.display()
         );

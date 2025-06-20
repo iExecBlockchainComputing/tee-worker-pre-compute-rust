@@ -3,6 +3,52 @@ use reqwest::blocking::get;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Writes content to a file at the specified path, with proper error handling and logging.
+///
+/// This function handles the common pattern of writing data to a file with logging
+/// and error handling.
+///
+/// # Arguments
+///
+/// * `content` - The content to write to the file
+/// * `file_path` - The path where the file should be written
+/// * `context` - A context string for logging (e.g., "url:https://iex.ec/file.txt" or "chainTaskId:0x123")
+///
+/// # Returns
+///
+/// * `Ok(())` if the file is successfully written
+/// * `Err(())` if the write operation fails
+///
+/// # Example
+///
+/// ```
+/// let content = b"Hello, world!";
+/// let path = PathBuf::from("/tmp/test.txt");
+/// if write_file(content, &path, "test context").is_ok() {
+///     println!("File written successfully");
+/// }
+/// ```
+pub fn write_file(content: &[u8], file_path: &Path, context: &str) -> Result<(), ()> {
+    match fs::write(file_path, content) {
+        Ok(_) => {
+            info!(
+                "File written successfully [context:{}, path:{}]",
+                context,
+                file_path.display()
+            );
+            Ok(())
+        }
+        Err(_) => {
+            error!(
+                "Failed to write file [context:{}, path:{}]",
+                context,
+                file_path.display()
+            );
+            Err(())
+        }
+    }
+}
+
 /// Downloads a file from a given URL and writes it to a specified folder with a specified filename.
 ///
 /// If the download or any file operation fails, the function logs an appropriate error
@@ -75,36 +121,23 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
 
     let file_path = parent_path.join(filename);
 
-    match fs::write(&file_path, bytes) {
-        Ok(_) => {
-            info!(
-                "Downloaded data [url:{}, file_path: {}]",
-                url,
-                file_path.display()
-            );
-            Some(file_path)
-        }
-        Err(_) => {
-            error!(
-                "Failed to write downloaded file to disk [url:{}, file_path:{}]",
-                url,
-                file_path.display()
-            );
-            if !parent_existed {
-                match fs::remove_dir_all(parent_path) {
-                    Ok(_) => {
-                        info!("Folder deleted [path:{}]", parent_path.display());
-                    }
-                    Err(_) => {
-                        error!(
-                            "Folder does not exist, nothing to delete [path:{}]",
-                            parent_path.display()
-                        );
-                    }
+    if write_file(&bytes, &file_path, &format!("url:{}", url)).is_ok() {
+        Some(file_path)
+    } else {
+        if !parent_existed {
+            match fs::remove_dir_all(parent_path) {
+                Ok(_) => {
+                    info!("Folder deleted [path:{}]", parent_path.display());
+                }
+                Err(_) => {
+                    error!(
+                        "Folder does not exist, nothing to delete [path:{}]",
+                        parent_path.display()
+                    );
                 }
             }
-            None
         }
+        None
     }
 }
 
@@ -162,6 +195,7 @@ pub fn download_from_url(url: &str) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Read;
     use tempfile::TempDir;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -275,6 +309,44 @@ mod tests {
         let result = download_from_url(&format!("{}/error", server_uri));
 
         assert!(result.is_none());
+    }
+    // endregion
+
+    // region write_file
+    #[test]
+    fn test_write_file_success() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test_write.txt");
+        let content = b"hello world!";
+        let context = "test_write_file_success";
+        let result = write_file(content, &file_path, context);
+        assert!(result.is_ok());
+        let mut file = fs::File::open(&file_path).unwrap();
+        let mut buf = Vec::new();
+        file.read_to_end(&mut buf).unwrap();
+        assert_eq!(buf, content);
+    }
+
+    #[test]
+    fn test_write_file_failure_invalid_path() {
+        let file_path = Path::new("/invalid_dir_123456789/test.txt");
+        let content = b"should fail";
+        let context = "test_write_file_failure_invalid_path";
+        let result = write_file(content, file_path, context);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_write_file_overwrite() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("overwrite.txt");
+        let context = "test_write_file_overwrite";
+        let content1 = b"first";
+        assert!(write_file(content1, &file_path, context).is_ok());
+        let content2 = b"second";
+        assert!(write_file(content2, &file_path, context).is_ok());
+        let data = fs::read(&file_path).unwrap();
+        assert_eq!(data, content2);
     }
     // endregion
 }
