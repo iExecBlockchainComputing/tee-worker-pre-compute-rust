@@ -304,26 +304,12 @@ impl PreComputeAppTrait for PreComputeApp {
             path.display()
         );
 
-        if write_file(
+        write_file(
             plain_dataset,
             &path,
             &format!("chainTaskId:{}", chain_task_id),
         )
-        .is_ok()
-        {
-            info!(
-                "Saved plain dataset file to disk [chain_task_id: {}]",
-                chain_task_id
-            );
-            Ok(())
-        } else {
-            error!(
-                "Failed to write plain dataset file [chainTaskId:{}, path:{}]",
-                chain_task_id,
-                path.display()
-            );
-            Err(ReplicateStatusCause::PreComputeSavingPlainDatasetFailed)
-        }
+        .map_err(|_| ReplicateStatusCause::PreComputeSavingPlainDatasetFailed)
     }
 }
 

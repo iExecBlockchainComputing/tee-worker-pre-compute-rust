@@ -32,7 +32,7 @@ pub fn write_file(content: &[u8], file_path: &Path, context: &str) -> Result<(),
     match fs::write(file_path, content) {
         Ok(_) => {
             info!(
-                "File written successfully [context:{}, path:{}]",
+                "File written successfully [{}, path:{}]",
                 context,
                 file_path.display()
             );
@@ -40,7 +40,7 @@ pub fn write_file(content: &[u8], file_path: &Path, context: &str) -> Result<(),
         }
         Err(_) => {
             error!(
-                "Failed to write file [context:{}, path:{}]",
+                "Failed to write file [{}, path:{}]",
                 context,
                 file_path.display()
             );
