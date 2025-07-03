@@ -283,7 +283,7 @@ mod tests {
     fn read_args_fails_when_invalid_input_files_number_format() {
         let mut env_vars = setup_basic_env_vars();
         env_vars.insert(
-            "IEXEC_INPUT_FILE_NUMBER".to_string(),
+            "IEXEC_INPUT_FILES_NUMBER".to_string(),
             "not-a-number".to_string(),
         );
         env_vars.insert(IsDatasetRequired.name(), "false".to_string());
