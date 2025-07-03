@@ -42,7 +42,7 @@ impl TeeSessionEnvironmentVariable {
                 "SIGN_TEE_CHALLENGE_PRIVATE_KEY".to_string()
             }
             TeeSessionEnvironmentVariable::SignWorkerAddress => "SIGN_WORKER_ADDRESS".to_string(),
-                        TeeSessionEnvironmentVariable::WorkerHostEnvVar => "WORKER_HOST_ENV_VAR".to_string(),
+            TeeSessionEnvironmentVariable::WorkerHostEnvVar => "WORKER_HOST_ENV_VAR".to_string(),
         }
     }
 }
