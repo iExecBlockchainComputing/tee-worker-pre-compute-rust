@@ -23,7 +23,7 @@ impl TeeSessionEnvironmentVariable {
                 "IEXEC_DATASET_CHECKSUM".to_string()
             }
             TeeSessionEnvironmentVariable::IexecDatasetFilename => {
-                "IEXEC_DATASET_FILE_NAME".to_string()
+                "IEXEC_DATASET_FILENAME".to_string()
             }
             TeeSessionEnvironmentVariable::IexecDatasetKey => "IEXEC_DATASET_KEY".to_string(),
             TeeSessionEnvironmentVariable::IexecDatasetUrl => "IEXEC_DATASET_URL".to_string(),
@@ -31,7 +31,7 @@ impl TeeSessionEnvironmentVariable {
                 format!("IEXEC_INPUT_FILE_URL_{}", index)
             }
             TeeSessionEnvironmentVariable::IexecInputFilesNumber => {
-                "IEXEC_INPUT_FILE_NUMBER".to_string()
+                "IEXEC_INPUT_FILES_NUMBER".to_string()
             }
             TeeSessionEnvironmentVariable::IexecPreComputeOut => {
                 "IEXEC_PRE_COMPUTE_OUT".to_string()
@@ -42,7 +42,7 @@ impl TeeSessionEnvironmentVariable {
                 "SIGN_TEE_CHALLENGE_PRIVATE_KEY".to_string()
             }
             TeeSessionEnvironmentVariable::SignWorkerAddress => "SIGN_WORKER_ADDRESS".to_string(),
-            TeeSessionEnvironmentVariable::WorkerHostEnvVar => "WORKER_HOST_ENV_VAR".to_string(),
+                        TeeSessionEnvironmentVariable::WorkerHostEnvVar => "WORKER_HOST_ENV_VAR".to_string(),
         }
     }
 }
