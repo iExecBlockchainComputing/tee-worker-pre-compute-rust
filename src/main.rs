@@ -1,6 +1,5 @@
-use std::process;
-
 use env_logger::Env;
+use std::process;
 
 mod api;
 mod compute;
