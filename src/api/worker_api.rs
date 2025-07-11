@@ -2,7 +2,8 @@ use crate::compute::{
     errors::ReplicateStatusCause,
     utils::env_utils::{TeeSessionEnvironmentVariable, get_env_var_or_error},
 };
-use reqwest::{Error, blocking::Client, header::AUTHORIZATION};
+use log::error;
+use reqwest::{blocking::Client, header::AUTHORIZATION};
 use serde::Serialize;
 
 /// Represents payload that can be sent to the worker API to report the outcome of the
@@ -136,19 +137,35 @@ impl WorkerApiClient {
         authorization: &str,
         chain_task_id: &str,
         exit_cause: &ExitMessage,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ReplicateStatusCause> {
         let url = format!("{}/compute/pre/{}/exit", self.base_url, chain_task_id);
-        let response = self
+        match self
             .client
             .post(&url)
             .header(AUTHORIZATION, authorization)
             .json(exit_cause)
-            .send()?;
-
-        if response.status().is_success() {
-            Ok(())
-        } else {
-            Err(response.error_for_status().unwrap_err())
+            .send()
+        {
+            Ok(resp) => {
+                let status = resp.status();
+                if status.is_success() {
+                    Ok(())
+                } else {
+                    let body = resp.text().unwrap_or_default();
+                    error!(
+                        "Failed to send exit cause: [status:{}, body:{}]",
+                        status, body
+                    );
+                    Err(ReplicateStatusCause::PreComputeFailedUnknownIssue)
+                }
+            }
+            Err(err) => {
+                error!(
+                    "HTTP request failed when sending exit cause to {}: {:?}",
+                    url, err
+                );
+                Err(ReplicateStatusCause::PreComputeFailedUnknownIssue)
+            }
         }
     }
 }
@@ -252,12 +269,13 @@ mod tests {
 
     #[tokio::test]
     async fn should_not_send_exit_cause() {
+        testing_logger::setup();
         let mock_server = MockServer::start().await;
         let server_url = mock_server.uri();
 
         Mock::given(method("POST"))
             .and(path(format!("/compute/pre/{}/exit", CHAIN_TASK_ID)))
-            .respond_with(ResponseTemplate::new(404))
+            .respond_with(ResponseTemplate::new(503).set_body_string("Service Unavailable"))
             .expect(1)
             .mount(&mock_server)
             .await;
@@ -266,20 +284,62 @@ mod tests {
             let exit_message =
                 ExitMessage::from(&ReplicateStatusCause::PreComputeFailedUnknownIssue);
             let worker_api_client = WorkerApiClient::new(&server_url);
-            worker_api_client.send_exit_cause_for_pre_compute_stage(
+            let response = worker_api_client.send_exit_cause_for_pre_compute_stage(
                 CHALLENGE,
                 CHAIN_TASK_ID,
                 &exit_message,
-            )
+            );
+            testing_logger::validate(|captured_logs| {
+                let logs = captured_logs
+                    .iter()
+                    .filter(|c| c.level == log::Level::Error)
+                    .collect::<Vec<&testing_logger::CapturedLog>>();
+
+                assert_eq!(logs.len(), 1);
+                assert_eq!(
+                    logs[0].body,
+                    "Failed to send exit cause: [status:503 Service Unavailable, body:Service Unavailable]"
+                );
+            });
+            response
         })
         .await
         .expect("Task panicked");
 
         assert!(result.is_err());
+        assert_eq!(
+            result,
+            Err(ReplicateStatusCause::PreComputeFailedUnknownIssue)
+        );
+    }
 
-        if let Err(error) = result {
-            assert_eq!(error.status().unwrap(), 404);
-        }
+    #[test]
+    fn test_send_exit_cause_http_request_failure() {
+        testing_logger::setup();
+        let exit_message = ExitMessage::from(&ReplicateStatusCause::PreComputeFailedUnknownIssue);
+        let worker_api_client = WorkerApiClient::new("wrong_url");
+        let result = worker_api_client.send_exit_cause_for_pre_compute_stage(
+            CHALLENGE,
+            CHAIN_TASK_ID,
+            &exit_message,
+        );
+        testing_logger::validate(|captured_logs| {
+            let logs = captured_logs
+                .iter()
+                .filter(|c| c.level == log::Level::Error)
+                .collect::<Vec<&testing_logger::CapturedLog>>();
+
+            assert_eq!(logs.len(), 1);
+            assert_eq!(
+                logs[0].body,
+                "HTTP request failed when sending exit cause to wrong_url/compute/pre/0x123456789abcdef/exit: reqwest::Error { kind: Builder, source: RelativeUrlWithoutBase }"
+            );
+        });
+        assert!(result.is_err());
+        assert_eq!(
+            result,
+            Err(ReplicateStatusCause::PreComputeFailedUnknownIssue)
+        );
     }
     // endregion
 }
