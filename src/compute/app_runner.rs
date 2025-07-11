@@ -82,8 +82,8 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> i32 {
         &exit_message,
     ) {
         Ok(_) => 1,
-        Err(e) => {
-            error!("Failed to report exitCause [{:?}]", e);
+        Err(_) => {
+            error!("Failed to report exitCause [{:?}]", exit_cause);
             2
         }
     }
