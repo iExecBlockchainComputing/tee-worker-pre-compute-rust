@@ -261,10 +261,9 @@ impl PreComputeAppTrait for PreComputeApp {
 
         let key_slice = &key[..32];
         let iv_slice = &encrypted_content[..16];
-        
         let ciphertext = &encrypted_content[16..];
-        let decryptor = Aes256CbcDec::new(key_slice.into(), iv_slice.into());
 
+        let decryptor = Aes256CbcDec::new(key_slice.into(), iv_slice.into());
         let decrypted = decryptor
             .decrypt_padded_vec_mut::<Pkcs7>(ciphertext)
             .map_err(|_| ReplicateStatusCause::PreComputeDatasetDecryptionFailed)?;
