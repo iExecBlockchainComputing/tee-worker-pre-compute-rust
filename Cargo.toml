@@ -8,7 +8,7 @@ aes = "0.8.4"
 alloy-signer = "0.15.9"
 alloy-signer-local = "0.15.9"
 base64 = "0.22.1"
-cbc = "0.1.2"
+cbc = { version = "0.1.2", features = ["alloc"] }
 env_logger = "0.11.8"
 log = "0.4.27"
 multiaddr = "0.18.2"

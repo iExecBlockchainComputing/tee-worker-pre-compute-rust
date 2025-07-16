@@ -259,20 +259,14 @@ impl PreComputeAppTrait for PreComputeApp {
             return Err(ReplicateStatusCause::PreComputeDatasetDecryptionFailed);
         }
 
-        let key_array: [u8; 32] = key
-            .try_into()
-            .map_err(|_| ReplicateStatusCause::PreComputeDatasetDecryptionFailed)?;
-        let iv_array: [u8; 16] = encrypted_content[..16]
-            .try_into()
-            .map_err(|_| ReplicateStatusCause::PreComputeDatasetDecryptionFailed)?;
-
+        let key_slice = &key[..32];
+        let iv_slice = &encrypted_content[..16];
+        
         let ciphertext = &encrypted_content[16..];
-        let decryptor = Aes256CbcDec::new(&key_array.into(), &iv_array.into());
-
-        let mut buffer = ciphertext.to_vec();
+        let decryptor = Aes256CbcDec::new(key_slice.into(), iv_slice.into());
 
         let decrypted = decryptor
-            .decrypt_padded_mut::<Pkcs7>(&mut buffer)
+            .decrypt_padded_vec_mut::<Pkcs7>(ciphertext)
             .map_err(|_| ReplicateStatusCause::PreComputeDatasetDecryptionFailed)?;
 
         Ok(decrypted.to_vec())
