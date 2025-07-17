@@ -4,13 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+aes = "0.8.4"
 alloy-signer = "0.15.9"
 alloy-signer-local = "0.15.9"
 base64 = "0.22.1"
+cbc = { version = "0.1.2", features = ["alloc"] }
 env_logger = "0.11.8"
 log = "0.4.27"
 multiaddr = "0.18.2"
-openssl = "0.10.73"
 reqwest = { version = "0.12.15", features = ["blocking", "json"] }
 serde = "1.0.219"
 sha256 = "1.6.0"
