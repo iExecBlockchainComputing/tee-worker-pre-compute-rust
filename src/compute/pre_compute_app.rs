@@ -2,15 +2,20 @@ use crate::compute::errors::ReplicateStatusCause;
 use crate::compute::pre_compute_args::PreComputeArgs;
 use crate::compute::utils::file_utils::{download_file, download_from_url, write_file};
 use crate::compute::utils::hash_utils::{sha256, sha256_from_bytes};
-use base64::{Engine, engine::general_purpose};
+use aes::Aes256;
+use base64::{Engine as _, engine::general_purpose};
+use cbc::{
+    Decryptor,
+    cipher::{BlockDecryptMut, KeyIvInit, block_padding::Pkcs7},
+};
 use log::{error, info};
 #[cfg(test)]
 use mockall::automock;
 use multiaddr::Multiaddr;
-use openssl::symm::{Cipher, decrypt};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
+type Aes256CbcDec = Decryptor<Aes256>;
 const IPFS_GATEWAYS: &[&str] = &[
     "https://ipfs-gateway.v8-bellecour.iex.ec",
     "https://gateway.ipfs.io",
@@ -250,19 +255,16 @@ impl PreComputeAppTrait for PreComputeApp {
             .decode(base64_key)
             .map_err(|_| ReplicateStatusCause::PreComputeDatasetDecryptionFailed)?;
 
-        if encrypted_content.len() < 16 {
+        if encrypted_content.len() < 16 || key.len() != 32 {
             return Err(ReplicateStatusCause::PreComputeDatasetDecryptionFailed);
         }
 
-        let iv = &encrypted_content[..16];
+        let key_slice = &key[..32];
+        let iv_slice = &encrypted_content[..16];
         let ciphertext = &encrypted_content[16..];
 
-        let cipher = match key.len() {
-            32 => Cipher::aes_256_cbc(),
-            _ => return Err(ReplicateStatusCause::PreComputeDatasetDecryptionFailed),
-        };
-
-        decrypt(cipher, &key, Some(iv), ciphertext)
+        Aes256CbcDec::new(key_slice.into(), iv_slice.into())
+            .decrypt_padded_vec_mut::<Pkcs7>(ciphertext)
             .map_err(|_| ReplicateStatusCause::PreComputeDatasetDecryptionFailed)
     }
 
