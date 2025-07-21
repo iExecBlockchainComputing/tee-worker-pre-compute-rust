@@ -263,11 +263,9 @@ impl PreComputeAppTrait for PreComputeApp {
         let iv_slice = &encrypted_content[..16];
         let ciphertext = &encrypted_content[16..];
 
-        let decryptor = Aes256CbcDec::new(key_slice.into(), iv_slice.into());
-        match decryptor.decrypt_padded_vec_mut::<Pkcs7>(ciphertext) {
-            Ok(decrypted) => Ok(decrypted),
-            Err(_) => Err(ReplicateStatusCause::PreComputeDatasetDecryptionFailed),
-        }
+        Aes256CbcDec::new(key_slice.into(), iv_slice.into())
+            .decrypt_padded_vec_mut::<Pkcs7>(ciphertext)
+            .map_err(|_| ReplicateStatusCause::PreComputeDatasetDecryptionFailed)
     }
 
     /// Saves the decrypted (plain) dataset to disk in the configured output directory.
