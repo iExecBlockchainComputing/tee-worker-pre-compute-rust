@@ -198,8 +198,8 @@ mod tests {
     use std::io::Read;
     use tempfile::TempDir;
     use testcontainers::core::{IntoContainerPort, WaitFor};
-    use testcontainers::{GenericImage, ImageExt};
     use testcontainers::runners::SyncRunner;
+    use testcontainers::{GenericImage, ImageExt};
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -209,12 +209,18 @@ mod tests {
     const FILE_NAME: &str = "test.json";
 
     fn assert_json_eq_from_file(actual: &[u8], file_path: &str) {
-        let expected_bytes = fs::read(Path::new(file_path)).expect("Failed to read expected JSON file");
+        let expected_bytes =
+            fs::read(Path::new(file_path)).expect("Failed to read expected JSON file");
 
-        let actual_json: serde_json::Value = serde_json::from_slice(actual).expect("Actual response is not valid JSON");
-        let expected_json: serde_json::Value = serde_json::from_slice(&expected_bytes).expect("Expected file is not valid JSON");
+        let actual_json: serde_json::Value =
+            serde_json::from_slice(actual).expect("Actual response is not valid JSON");
+        let expected_json: serde_json::Value =
+            serde_json::from_slice(&expected_bytes).expect("Expected file is not valid JSON");
 
-        assert_eq!(actual_json, expected_json, "JSON content does not match the expected file");
+        assert_eq!(
+            actual_json, expected_json,
+            "JSON content does not match the expected file"
+        );
     }
 
     // region download_file
@@ -248,17 +254,19 @@ mod tests {
             .with_env_var("DEBUG", "1")
             .start()
             .expect("Failed to start Httpbin");
-        let port = container.get_host_port_ipv4(80).expect("Could not get host port");
+        let port = container
+            .get_host_port_ipv4(80)
+            .expect("Could not get host port");
         let container_url = format!("http://127.0.0.1:{}/json", port);
 
         let result = download_file(&container_url, PARENT_DIR, FILE_NAME);
         assert!(result.is_some());
-        
+
         let path = result.unwrap();
         assert!(path.is_file());
 
         let content = fs::read(&path).unwrap();
-        assert_json_eq_from_file(&content,EXPECTED_DATA_PATH);
+        assert_json_eq_from_file(&content, EXPECTED_DATA_PATH);
 
         let _ = fs::remove_file(&path);
     }
@@ -272,17 +280,15 @@ mod tests {
             .with_env_var("DEBUG", "1")
             .start()
             .expect("Failed to start Httpbin");
-        let port = container.get_host_port_ipv4(80).expect("Could not get host port");
+        let port = container
+            .get_host_port_ipv4(80)
+            .expect("Could not get host port");
         let container_url = format!("http://127.0.0.1:{}/json", port);
 
         let temp_dir = TempDir::new().unwrap();
         let nested_path = temp_dir.path().join("nested").join("deep");
 
-        let result = download_file(
-            &container_url,
-            nested_path.to_str().unwrap(),
-            "test.json",
-        );
+        let result = download_file(&container_url, nested_path.to_str().unwrap(), "test.json");
         assert!(result.is_some());
 
         let path = result.unwrap();
@@ -303,12 +309,14 @@ mod tests {
             .with_env_var("DEBUG", "1")
             .start()
             .expect("Failed to start Httpbin");
-        let port = container.get_host_port_ipv4(80).expect("Could not get host port");
+        let port = container
+            .get_host_port_ipv4(80)
+            .expect("Could not get host port");
         let container_url = format!("http://127.0.0.1:{}/json", port);
 
         let result = download_from_url(&container_url);
         assert!(result.is_some());
-        assert_json_eq_from_file(&result.unwrap(),EXPECTED_DATA_PATH);
+        assert_json_eq_from_file(&result.unwrap(), EXPECTED_DATA_PATH);
     }
 
     #[test]

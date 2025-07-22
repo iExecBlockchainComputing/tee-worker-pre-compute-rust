@@ -326,8 +326,8 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
     use testcontainers::core::{IntoContainerPort, WaitFor};
-    use testcontainers::{GenericImage, ImageExt};
     use testcontainers::runners::SyncRunner;
+    use testcontainers::{GenericImage, ImageExt};
 
     const CHAIN_TASK_ID: &str = "0x123456789abcdef";
     const DATASET_CHECKSUM: &str =
@@ -406,7 +406,9 @@ mod tests {
             .with_env_var("DEBUG", "1")
             .start()
             .expect("Failed to start Httpbin");
-        let port = container.get_host_port_ipv4(80).expect("Could not get host port");
+        let port = container
+            .get_host_port_ipv4(80)
+            .expect("Could not get host port");
         let container_url = format!("http://127.0.0.1:{}/json", port);
 
         let temp_dir = TempDir::new().unwrap();
@@ -433,14 +435,16 @@ mod tests {
             .with_env_var("DEBUG", "1")
             .start()
             .expect("Failed to start Httpbin");
-        let port = container.get_host_port_ipv4(80).expect("Could not get host port");
+        let port = container
+            .get_host_port_ipv4(80)
+            .expect("Could not get host port");
         let container_url_json = format!("http://127.0.0.1:{}/json", port);
         let container_url_xml = format!("http://127.0.0.1:{}/xml", port);
 
         let temp_dir = TempDir::new().unwrap();
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
-        vec![&container_url_json, &container_url_xml],
+            vec![&container_url_json, &container_url_xml],
             temp_dir.path().to_str().unwrap(),
         );
 
@@ -479,7 +483,9 @@ mod tests {
             .with_env_var("DEBUG", "1")
             .start()
             .expect("Failed to start Httpbin");
-        let port = container.get_host_port_ipv4(80).expect("Could not get host port");
+        let port = container
+            .get_host_port_ipv4(80)
+            .expect("Could not get host port");
         let container_url_json = format!("http://127.0.0.1:{}/json", port);
         let container_url_xml = format!("http://127.0.0.1:{}/xml", port);
 
@@ -487,9 +493,9 @@ mod tests {
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
             vec![
-                &container_url_json,                          // This should succeed
+                &container_url_json,                                 // This should succeed
                 "https://invalid-url-that-should-fail.com/file.txt", // This should fail
-                &container_url_xml,                           // This shouldn't be reached
+                &container_url_xml,                                  // This shouldn't be reached
             ],
             temp_dir.path().to_str().unwrap(),
         );
