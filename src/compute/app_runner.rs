@@ -11,7 +11,7 @@ use log::{error, info};
 ///
 /// Each variant is explicitly assigned an `i32` value, and the enum
 /// uses `#[repr(i32)]` to ensure its memory representation matches C-style enums.
-#[cfg_attr(test, derive(Debug, Clone, PartialEq))]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[repr(i32)]
 pub enum ExitMode {
     Success = 0,
