@@ -21,6 +21,8 @@ const IPFS_GATEWAYS: &[&str] = &[
     "https://gateway.ipfs.io",
     "https://gateway.pinata.cloud",
 ];
+const AES_KEY_LENGTH: usize = 32;
+const AES_IV_LENGTH: usize = 16;
 
 #[cfg_attr(test, automock)]
 pub trait PreComputeAppTrait {
@@ -255,13 +257,13 @@ impl PreComputeAppTrait for PreComputeApp {
             .decode(base64_key)
             .map_err(|_| ReplicateStatusCause::PreComputeDatasetDecryptionFailed)?;
 
-        if encrypted_content.len() < 16 || key.len() != 32 {
+        if encrypted_content.len() < AES_IV_LENGTH || key.len() != AES_KEY_LENGTH {
             return Err(ReplicateStatusCause::PreComputeDatasetDecryptionFailed);
         }
 
-        let key_slice = &key[..32];
-        let iv_slice = &encrypted_content[..16];
-        let ciphertext = &encrypted_content[16..];
+        let key_slice = &key[..AES_KEY_LENGTH];
+        let iv_slice = &encrypted_content[..AES_IV_LENGTH];
+        let ciphertext = &encrypted_content[AES_IV_LENGTH..];
 
         Aes256CbcDec::new(key_slice.into(), iv_slice.into())
             .decrypt_padded_vec_mut::<Pkcs7>(ciphertext)
