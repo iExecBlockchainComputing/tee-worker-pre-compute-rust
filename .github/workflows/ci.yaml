@@ -9,4 +9,6 @@ jobs:
     uses: iExecBlockchainComputing/github-actions-workflows/.github/workflows/rust-build.yml@rust-build-v2.0.0
     with:
       rust-version: '1.85.0'
+      working-directory: "."
       enable-cache: true
+      publish-crates-io: false
