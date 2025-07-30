@@ -7,6 +7,19 @@ use crate::compute::{
 };
 use log::{error, info};
 
+/// Represents the different exit modes for a process or application.
+///
+/// Each variant is explicitly assigned an `i32` value, and the enum
+/// uses `#[repr(i32)]` to ensure its memory representation matches C-style enums.
+#[cfg_attr(test, derive(Debug, PartialEq))]
+#[repr(i32)]
+pub enum ExitMode {
+    Success = 0,
+    ReportedFailure = 1,
+    UnreportedFailure = 2,
+    InitializationFailure = 3,
+}
+
 /// Executes the pre-compute workflow with a provided PreComputeApp implementation.
 ///
 /// This function orchestrates the full pre-compute process, handling environment
@@ -18,14 +31,6 @@ use log::{error, info};
 ///
 /// * `pre_compute_app` - An implementation of [`PreComputeAppTrait`] that will be used to execute the pre-compute operations.
 ///
-/// # Returns
-///
-/// * `i32` - An exit code indicating the result of the pre-compute process:
-///   - 0: Success - pre-compute completed successfully
-///   - 1: Failure with reported cause - pre-compute failed but the cause was reported
-///   - 2: Failure with unreported cause - pre-compute failed and the cause could not be reported
-///   - 3: Failure due to missing taskID context - pre-compute could not start due to missing task ID
-///
 /// # Example
 ///
 /// ```
@@ -35,7 +40,7 @@ use log::{error, info};
 /// let pre_compute_app = PreComputeApp::new();
 /// let exit_code = start_with_app(pre_compute_app);
 /// ```
-pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> i32 {
+pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> ExitMode {
     info!("TEE pre-compute started");
 
     let exit_cause = ReplicateStatusCause::PreComputeFailedUnknownIssue;
@@ -47,14 +52,14 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> i32 {
                     "TEE pre-compute cannot proceed without taskID context: {:?}",
                     e
                 );
-                return 3;
+                return ExitMode::InitializationFailure;
             }
         };
 
     match pre_compute_app.run(&chain_task_id) {
         Ok(_) => {
             info!("TEE pre-compute completed");
-            return 0;
+            return ExitMode::Success;
         }
         Err(exit_cause) => {
             error!(
@@ -68,7 +73,7 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> i32 {
         Ok(auth) => auth,
         Err(_) => {
             error!("Failed to sign exitCause message [{:?}]", exit_cause);
-            return 2;
+            return ExitMode::UnreportedFailure;
         }
     };
 
@@ -81,10 +86,10 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> i32 {
         &chain_task_id,
         &exit_message,
     ) {
-        Ok(_) => 1,
+        Ok(_) => ExitMode::ReportedFailure,
         Err(_) => {
             error!("Failed to report exitCause [{:?}]", exit_cause);
-            2
+            ExitMode::UnreportedFailure
         }
     }
 }
@@ -94,11 +99,6 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> i32 {
 /// This is a convenience function that creates a [`PreComputeApp`]
 /// and passes it to [`start_with_app`].
 ///
-/// # Returns
-///
-/// * `i32` - An exit code indicating the result of the pre-compute process.
-///   See [`start_with_app`] for details on the possible exit codes.
-///
 /// # Example
 ///
 /// ```
@@ -107,7 +107,7 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> i32 {
 /// let exit_code = start();
 /// std::process::exit(exit_code);
 /// ```
-pub fn start() -> i32 {
+pub fn start() -> ExitMode {
     let mut pre_compute_app = PreComputeApp::new();
     start_with_app(&mut pre_compute_app)
 }
@@ -133,7 +133,11 @@ mod pre_compute_start_with_app_tests {
     #[test]
     fn start_fails_when_task_id_missing() {
         temp_env::with_vars_unset(vec![ENV_IEXEC_TASK_ID], || {
-            assert_eq!(start(), 3, "Should return 3 if IEXEC_TASK_ID is missing");
+            assert_eq!(
+                start(),
+                ExitMode::InitializationFailure,
+                "Should return 3 if IEXEC_TASK_ID is missing"
+            );
         });
     }
 
@@ -157,7 +161,7 @@ mod pre_compute_start_with_app_tests {
             temp_env::with_vars_unset(env_vars_to_unset, || {
                 assert_eq!(
                     start_with_app(&mut mock),
-                    2,
+                    ExitMode::UnreportedFailure,
                     "Should return 2 if get_challenge fails due to missing signer address"
                 );
             });
@@ -181,7 +185,7 @@ mod pre_compute_start_with_app_tests {
             temp_env::with_vars_unset(env_vars_to_unset, || {
                 assert_eq!(
                     start_with_app(&mut mock),
-                    2,
+                    ExitMode::UnreportedFailure,
                     "Should return 2 if get_challenge fails due to missing private key"
                 );
             });
@@ -222,7 +226,8 @@ mod pre_compute_start_with_app_tests {
         .expect("Blocking task panicked");
 
         assert_eq!(
-            result_code, 2,
+            result_code,
+            ExitMode::UnreportedFailure,
             "Should return 2 if sending exit cause to worker API fails"
         );
     }
@@ -269,7 +274,8 @@ mod pre_compute_start_with_app_tests {
         .expect("Blocking task panicked");
 
         assert_eq!(
-            result_code, 1,
+            result_code,
+            ExitMode::ReportedFailure,
             "Should return 1 if sending exit cause to worker API succeeds"
         );
     }
