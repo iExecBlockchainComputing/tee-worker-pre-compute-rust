@@ -1,0 +1,17 @@
+name: Rust CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    uses: iExecBlockchainComputing/github-actions-workflows/.github/workflows/rust-build.yml@main
+    with:
+      rust-version: '1.85.0'
+      enable-cache: true
+      publish-crates-io: false
+    secrets:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
