@@ -495,9 +495,9 @@ mod tests {
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
             vec![
-                &container_url_json,                          // This should succeed
+                &container_url_json,                                 // This should succeed
                 "https://invalid-url-that-should-fail.com/file.txt", // This should fail
-                &container_url_xml,                           // This shouldn't be reached
+                &container_url_xml,                                  // This shouldn't be reached
             ],
             temp_dir.path().to_str().unwrap(),
         );
