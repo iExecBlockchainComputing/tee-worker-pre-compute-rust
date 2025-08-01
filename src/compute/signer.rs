@@ -33,8 +33,8 @@ use alloy_signer_local::PrivateKeySigner;
 /// let private_key = "0xdd3b993ec21c71c1f6d63a5240850e0d4d8dd83ff70d29e49247958548c1d479";
 ///
 /// match sign_enclave_challenge(message_hash, private_key) {
-///     Ok(signature) => println!("Signature: {}", signature),
-///     Err(e) => eprintln!("Error: {:?}", e),
+///     Ok(signature) => println!("Signature: {signature}"),
+///     Err(e) => eprintln!("Error: {e:?}"),
 /// }
 /// ```
 pub fn sign_enclave_challenge(
@@ -89,8 +89,8 @@ pub fn sign_enclave_challenge(
 /// let chain_task_id = "0x123456789abcdef";
 ///
 /// match challenge(chain_task_id) {
-///     Ok(signature) => println!("Challenge signature: {}", signature),
-///     Err(e) => eprintln!("Error generating challenge: {:?}", e),
+///     Ok(signature) => println!("Challenge signature: {signature}"),
+///     Err(e) => eprintln!("Error generating challenge: {e:?}"),
 /// }
 /// ```
 pub fn get_challenge(chain_task_id: &str) -> Result<String, ReplicateStatusCause> {
