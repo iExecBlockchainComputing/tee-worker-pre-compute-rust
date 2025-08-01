@@ -28,7 +28,7 @@ impl TeeSessionEnvironmentVariable {
             TeeSessionEnvironmentVariable::IexecDatasetKey => "IEXEC_DATASET_KEY".to_string(),
             TeeSessionEnvironmentVariable::IexecDatasetUrl => "IEXEC_DATASET_URL".to_string(),
             TeeSessionEnvironmentVariable::IexecInputFileUrlPrefix(index) => {
-                format!("IEXEC_INPUT_FILE_URL_{}", index)
+                format!("IEXEC_INPUT_FILE_URL_{index}")
             }
             TeeSessionEnvironmentVariable::IexecInputFilesNumber => {
                 "IEXEC_INPUT_FILES_NUMBER".to_string()

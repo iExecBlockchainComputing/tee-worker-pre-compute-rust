@@ -91,19 +91,13 @@ impl PreComputeAppTrait for PreComputeApp {
 
         let chain_task_id = self.chain_task_id.as_deref().unwrap_or("unknown");
 
-        info!(
-            "Checking output folder [chainTaskId:{}, path:{}]",
-            chain_task_id, output_dir
-        );
+        info!("Checking output folder [chainTaskId:{chain_task_id}, path:{output_dir}]",);
 
         if Path::new(&output_dir).is_dir() {
             return Ok(());
         }
 
-        error!(
-            "Output folder not found [chainTaskId:{}, path:{}]",
-            chain_task_id, output_dir
-        );
+        error!("Output folder not found [chainTaskId:{chain_task_id}, path:{output_dir}]",);
 
         Err(ReplicateStatusCause::PreComputeOutputFolderNotFound)
     }
@@ -140,10 +134,7 @@ impl PreComputeAppTrait for PreComputeApp {
         let chain_task_id = self.chain_task_id.as_ref().unwrap();
 
         for url in &args.input_files {
-            info!(
-                "Downloading input file [chainTaskId: {}, url: {}]",
-                chain_task_id, url
-            );
+            info!("Downloading input file [chainTaskId: {chain_task_id}, url: {url}]",);
 
             let filename = sha256(url.to_string());
             if download_file(url, &args.output_dir, &filename).is_none() {
@@ -176,20 +167,19 @@ impl PreComputeAppTrait for PreComputeApp {
         let encrypted_dataset_url = args.encrypted_dataset_url.as_ref().unwrap();
 
         info!(
-            "Downloading encrypted dataset file [chainTaskId: {}, url: {}]",
-            chain_task_id, encrypted_dataset_url
+            "Downloading encrypted dataset file [chainTaskId: {chain_task_id}, url: {encrypted_dataset_url}]",
         );
 
         let encrypted_content = if is_multi_address(encrypted_dataset_url) {
             IPFS_GATEWAYS.iter().find_map(|gateway| {
-                let full_url = format!("{}{}", gateway, encrypted_dataset_url);
-                info!("Attempting to download dataset from {}", full_url);
+                let full_url = format!("{gateway}{encrypted_dataset_url}");
+                info!("Attempting to download dataset from {full_url}");
 
                 if let Some(content) = download_from_url(&full_url) {
-                    info!("Successfully downloaded from {}", full_url);
+                    info!("Successfully downloaded from {full_url}");
                     Some(content)
                 } else {
-                    info!("Failed to download from {}", full_url);
+                    info!("Failed to download from {full_url}");
                     None
                 }
             })
@@ -198,10 +188,7 @@ impl PreComputeAppTrait for PreComputeApp {
         }
         .ok_or(ReplicateStatusCause::PreComputeDatasetDownloadFailed)?;
 
-        info!(
-            "Checking encrypted dataset checksum [chainTaskId: {}]",
-            chain_task_id
-        );
+        info!("Checking encrypted dataset checksum [chainTaskId: {chain_task_id}]",);
         let expected_checksum = args
             .encrypted_dataset_checksum
             .as_ref()
@@ -210,8 +197,7 @@ impl PreComputeAppTrait for PreComputeApp {
 
         if actual_checksum != *expected_checksum {
             error!(
-                "Invalid dataset checksum [chainTaskId: {}, expected: {}, actual: {}]",
-                chain_task_id, expected_checksum, actual_checksum
+                "Invalid dataset checksum [chainTaskId: {chain_task_id}, expected: {expected_checksum}, actual: {actual_checksum}]",
             );
             return Err(ReplicateStatusCause::PreComputeInvalidDatasetChecksum);
         }
@@ -303,15 +289,14 @@ impl PreComputeAppTrait for PreComputeApp {
         path.push(plain_dataset_filename);
 
         info!(
-            "Saving plain dataset file [chain_task_id:{}, path:{}]",
-            chain_task_id,
+            "Saving plain dataset file [chain_task_id:{chain_task_id}, path:{}]",
             path.display()
         );
 
         write_file(
             plain_dataset,
             &path,
-            &format!("chainTaskId:{}", chain_task_id),
+            &format!("chainTaskId:{chain_task_id}"),
         )
         .map_err(|_| ReplicateStatusCause::PreComputeSavingPlainDatasetFailed)
     }

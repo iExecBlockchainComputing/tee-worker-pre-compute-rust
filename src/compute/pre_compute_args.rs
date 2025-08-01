@@ -154,7 +154,7 @@ mod tests {
         for i in 1..=count {
             vars.insert(
                 IexecInputFileUrlPrefix(i).name(),
-                format!("https://input-{}.txt", i),
+                format!("https://input-{i}.txt"),
             );
         }
         vars

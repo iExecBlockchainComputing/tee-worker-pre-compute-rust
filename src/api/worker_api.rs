@@ -89,7 +89,7 @@ impl WorkerApiClient {
         )
         .unwrap_or_else(|_| DEFAULT_WORKER_HOST.to_string());
 
-        let base_url = format!("http://{}", &worker_host);
+        let base_url = format!("http://{worker_host}");
         Self::new(&base_url)
     }
 
@@ -129,7 +129,7 @@ impl WorkerApiClient {
     ///     &exit_message,
     /// ) {
     ///     Ok(()) => println!("Exit cause reported successfully"),
-    ///     Err(error) => eprintln!("Failed to report exit cause: {}", error),
+    ///     Err(error) => eprintln!("Failed to report exit cause: {error}"),
     /// }
     /// ```
     pub fn send_exit_cause_for_pre_compute_stage(
@@ -138,7 +138,7 @@ impl WorkerApiClient {
         chain_task_id: &str,
         exit_cause: &ExitMessage,
     ) -> Result<(), ReplicateStatusCause> {
-        let url = format!("{}/compute/pre/{}/exit", self.base_url, chain_task_id);
+        let url = format!("{0}/compute/pre/{chain_task_id}/exit", self.base_url);
         match self
             .client
             .post(&url)
@@ -152,18 +152,12 @@ impl WorkerApiClient {
                     Ok(())
                 } else {
                     let body = resp.text().unwrap_or_default();
-                    error!(
-                        "Failed to send exit cause: [status:{}, body:{}]",
-                        status, body
-                    );
+                    error!("Failed to send exit cause: [status:{status}, body:{body}]");
                     Err(ReplicateStatusCause::PreComputeFailedUnknownIssue)
                 }
             }
             Err(err) => {
-                error!(
-                    "HTTP request failed when sending exit cause to {}: {:?}",
-                    url, err
-                );
+                error!("HTTP request failed when sending exit cause to {url}: {err:?}",);
                 Err(ReplicateStatusCause::PreComputeFailedUnknownIssue)
             }
         }
@@ -224,7 +218,7 @@ mod tests {
     fn should_get_worker_api_client_without_env_var() {
         temp_env::with_vars_unset(vec![WorkerHostEnvVar.name()], || {
             let client = WorkerApiClient::from_env();
-            assert_eq!(client.base_url, format!("http://{}", DEFAULT_WORKER_HOST));
+            assert_eq!(client.base_url, format!("http://{DEFAULT_WORKER_HOST}"));
         });
     }
     // endregion
@@ -243,7 +237,7 @@ mod tests {
         });
 
         Mock::given(method("POST"))
-            .and(path(format!("/compute/pre/{}/exit", CHAIN_TASK_ID)))
+            .and(path(format!("/compute/pre/{CHAIN_TASK_ID}/exit")))
             .and(header("Authorization", CHALLENGE))
             .and(body_json(&expected_body))
             .respond_with(ResponseTemplate::new(200))
@@ -274,7 +268,7 @@ mod tests {
         let server_url = mock_server.uri();
 
         Mock::given(method("POST"))
-            .and(path(format!("/compute/pre/{}/exit", CHAIN_TASK_ID)))
+            .and(path(format!("/compute/pre/{CHAIN_TASK_ID}/exit")))
             .respond_with(ResponseTemplate::new(503).set_body_string("Service Unavailable"))
             .expect(1)
             .mount(&mock_server)
