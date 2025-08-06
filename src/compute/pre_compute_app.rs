@@ -327,9 +327,9 @@ mod tests {
     use crate::compute::pre_compute_args::PreComputeArgs;
     use std::fs;
     use tempfile::TempDir;
-    use testcontainers::core::{IntoContainerPort, WaitFor};
+    use testcontainers::core::WaitFor;
     use testcontainers::runners::SyncRunner;
-    use testcontainers::{Container, GenericImage, ImageExt};
+    use testcontainers::{Container, GenericImage};
 
     const CHAIN_TASK_ID: &str = "0x123456789abcdef";
     const DATASET_CHECKSUM: &str =
@@ -360,10 +360,7 @@ mod tests {
 
     fn start_container() -> (Container<GenericImage>, String, String) {
         let container = GenericImage::new("kennethreitz/httpbin", "latest")
-            .with_exposed_port(80.tcp())
             .with_wait_for(WaitFor::message_on_stderr("Listening at"))
-            .with_network("bridge")
-            .with_env_var("DEBUG", "1")
             .start()
             .expect("Failed to start Httpbin");
         let port = container
