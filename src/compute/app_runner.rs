@@ -48,7 +48,7 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> ExitMod
         match get_env_var_or_error(IexecTaskId, ReplicateStatusCause::PreComputeTaskIdMissing) {
             Ok(id) => id,
             Err(e) => {
-                error!("TEE pre-compute cannot proceed without taskID context: {e:?}",);
+                error!("TEE pre-compute cannot proceed without taskID context: {e:?}");
                 return ExitMode::InitializationFailure;
             }
         };
@@ -59,7 +59,7 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> ExitMod
             return ExitMode::Success;
         }
         Err(exit_cause) => {
-            error!("TEE pre-compute failed with known exit cause [{exit_cause:?}]",);
+            error!("TEE pre-compute failed with known exit cause [{exit_cause:?}]");
         }
     }
 

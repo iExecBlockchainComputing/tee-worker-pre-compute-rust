@@ -138,7 +138,7 @@ impl WorkerApiClient {
         chain_task_id: &str,
         exit_cause: &ExitMessage,
     ) -> Result<(), ReplicateStatusCause> {
-        let url = format!("{0}/compute/pre/{chain_task_id}/exit", self.base_url);
+        let url = format!("{}/compute/pre/{chain_task_id}/exit", self.base_url);
         match self
             .client
             .post(&url)
@@ -157,7 +157,7 @@ impl WorkerApiClient {
                 }
             }
             Err(err) => {
-                error!("HTTP request failed when sending exit cause to {url}: {err:?}",);
+                error!("HTTP request failed when sending exit cause to {url}: {err:?}");
                 Err(ReplicateStatusCause::PreComputeFailedUnknownIssue)
             }
         }

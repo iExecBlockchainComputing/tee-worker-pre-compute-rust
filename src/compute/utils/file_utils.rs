@@ -84,11 +84,11 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
         return None;
     }
     if parent_dir.is_empty() {
-        error!("Invalid parent folder path [url:{url}, parent_dir:{parent_dir}]",);
+        error!("Invalid parent folder path [url:{url}, parent_dir:{parent_dir}]");
         return None;
     }
     if filename.is_empty() {
-        error!("Invalid output filename [url:{url}, parent_dir:{parent_dir}, filename:{filename}]",);
+        error!("Invalid output filename [url:{url}, parent_dir:{parent_dir}, filename:{filename}]");
         return None;
     }
 
@@ -104,7 +104,7 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
     let parent_existed = parent_path.exists();
 
     if !parent_existed && fs::create_dir_all(parent_path).is_err() {
-        error!("Failed to create parent folder [url:{url}, parent_dir:{parent_dir}]",);
+        error!("Failed to create parent folder [url:{url}, parent_dir:{parent_dir}]");
         return None;
     }
 

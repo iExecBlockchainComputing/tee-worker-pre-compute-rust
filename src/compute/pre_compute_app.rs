@@ -91,13 +91,13 @@ impl PreComputeAppTrait for PreComputeApp {
 
         let chain_task_id = self.chain_task_id.as_deref().unwrap_or("unknown");
 
-        info!("Checking output folder [chainTaskId:{chain_task_id}, path:{output_dir}]",);
+        info!("Checking output folder [chainTaskId:{chain_task_id}, path:{output_dir}]");
 
         if Path::new(&output_dir).is_dir() {
             return Ok(());
         }
 
-        error!("Output folder not found [chainTaskId:{chain_task_id}, path:{output_dir}]",);
+        error!("Output folder not found [chainTaskId:{chain_task_id}, path:{output_dir}]");
 
         Err(ReplicateStatusCause::PreComputeOutputFolderNotFound)
     }
@@ -134,7 +134,7 @@ impl PreComputeAppTrait for PreComputeApp {
         let chain_task_id = self.chain_task_id.as_ref().unwrap();
 
         for url in &args.input_files {
-            info!("Downloading input file [chainTaskId: {chain_task_id}, url: {url}]",);
+            info!("Downloading input file [chainTaskId:{chain_task_id}, url:{url}]");
 
             let filename = sha256(url.to_string());
             if download_file(url, &args.output_dir, &filename).is_none() {
@@ -167,7 +167,7 @@ impl PreComputeAppTrait for PreComputeApp {
         let encrypted_dataset_url = args.encrypted_dataset_url.as_ref().unwrap();
 
         info!(
-            "Downloading encrypted dataset file [chainTaskId: {chain_task_id}, url: {encrypted_dataset_url}]",
+            "Downloading encrypted dataset file [chainTaskId:{chain_task_id}, url:{encrypted_dataset_url}]",
         );
 
         let encrypted_content = if is_multi_address(encrypted_dataset_url) {
@@ -188,7 +188,7 @@ impl PreComputeAppTrait for PreComputeApp {
         }
         .ok_or(ReplicateStatusCause::PreComputeDatasetDownloadFailed)?;
 
-        info!("Checking encrypted dataset checksum [chainTaskId: {chain_task_id}]",);
+        info!("Checking encrypted dataset checksum [chainTaskId:{chain_task_id}]");
         let expected_checksum = args
             .encrypted_dataset_checksum
             .as_ref()
@@ -197,7 +197,7 @@ impl PreComputeAppTrait for PreComputeApp {
 
         if actual_checksum != *expected_checksum {
             error!(
-                "Invalid dataset checksum [chainTaskId: {chain_task_id}, expected: {expected_checksum}, actual: {actual_checksum}]",
+                "Invalid dataset checksum [chainTaskId:{chain_task_id}, expected:{expected_checksum}, actual:{actual_checksum}]"
             );
             return Err(ReplicateStatusCause::PreComputeInvalidDatasetChecksum);
         }
