@@ -32,16 +32,14 @@ pub fn write_file(content: &[u8], file_path: &Path, context: &str) -> Result<(),
     match fs::write(file_path, content) {
         Ok(_) => {
             info!(
-                "File written successfully [{}, path:{}]",
-                context,
+                "File written successfully [{context}, path:{}]",
                 file_path.display()
             );
             Ok(())
         }
         Err(_) => {
             error!(
-                "Failed to write file [{}, path:{}]",
-                context,
+                "Failed to write file [{context}, path:{}]",
                 file_path.display()
             );
             Err(())
@@ -82,28 +80,22 @@ pub fn write_file(content: &[u8], file_path: &Path, context: &str) -> Result<(),
 /// - The downloaded content is fully loaded into memory before being written to disk.
 pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<PathBuf> {
     if url.is_empty() {
-        error!("Invalid file url [url:{}]", url);
+        error!("Invalid file url [url:{url}]");
         return None;
     }
     if parent_dir.is_empty() {
-        error!(
-            "Invalid parent folder path [url:{}, parent_dir:{}]",
-            url, parent_dir
-        );
+        error!("Invalid parent folder path [url:{url}, parent_dir:{parent_dir}]");
         return None;
     }
     if filename.is_empty() {
-        error!(
-            "Invalid output filename [url:{}, parent_dir:{}, filename:{}]",
-            url, parent_dir, filename
-        );
+        error!("Invalid output filename [url:{url}, parent_dir:{parent_dir}, filename:{filename}]");
         return None;
     }
 
     let bytes = match download_from_url(url) {
         Some(b) => b,
         None => {
-            error!("Failed to download file [url:{}]", url);
+            error!("Failed to download file [url:{url}]");
             return None;
         }
     };
@@ -112,16 +104,13 @@ pub fn download_file(url: &str, parent_dir: &str, filename: &str) -> Option<Path
     let parent_existed = parent_path.exists();
 
     if !parent_existed && fs::create_dir_all(parent_path).is_err() {
-        error!(
-            "Failed to create parent folder [url:{}, parent_dir:{}]",
-            url, parent_dir
-        );
+        error!("Failed to create parent folder [url:{url}, parent_dir:{parent_dir}]");
         return None;
     }
 
     let file_path = parent_path.join(filename);
 
-    if write_file(&bytes, &file_path, &format!("url:{}", url)).is_ok() {
+    if write_file(&bytes, &file_path, &format!("url:{url}")).is_ok() {
         Some(file_path)
     } else {
         if !parent_existed {
@@ -175,18 +164,18 @@ pub fn download_from_url(url: &str) -> Option<Vec<u8>> {
         return None;
     }
 
-    info!("Attempting to download from {}", url);
+    info!("Attempting to download from {url}");
 
     match get(url)
         .and_then(|response| response.error_for_status())
         .and_then(|response| response.bytes())
     {
         Ok(bytes) => {
-            info!("Successfully downloaded {} bytes from {}", bytes.len(), url);
+            info!("Successfully downloaded {} bytes from {url}", bytes.len());
             Some(bytes.to_vec())
         }
         Err(e) => {
-            error!("Failed to download from {}: {}", url, e);
+            error!("Failed to download from {url}: {e}");
             None
         }
     }
@@ -331,7 +320,7 @@ mod tests {
         });
 
         let server_uri = mock_server.uri();
-        let result = download_from_url(&format!("{}/error", server_uri));
+        let result = download_from_url(&format!("{server_uri}/error"));
 
         assert!(result.is_none());
     }
