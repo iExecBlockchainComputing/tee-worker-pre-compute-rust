@@ -312,12 +312,15 @@ mod tests {
     use crate::compute::pre_compute_args::PreComputeArgs;
     use std::fs;
     use tempfile::TempDir;
+    use testcontainers::core::WaitFor;
+    use testcontainers::runners::SyncRunner;
+    use testcontainers::{Container, GenericImage};
 
     const CHAIN_TASK_ID: &str = "0x123456789abcdef";
     const DATASET_CHECKSUM: &str =
         "0x02a12ef127dcfbdb294a090c8f0b69a0ca30b7940fc36cabf971f488efd374d7";
     const ENCRYPTED_DATASET_KEY: &str = "ubA6H9emVPJT91/flYAmnKHC0phSV3cfuqsLxQfgow0=";
-    const HTTP_DATASET_URL: &str = "https://raw.githubusercontent.com/iExecBlockchainComputing/tee-worker-pre-compute/develop/src/test/resources/encrypted-data.bin";
+    const HTTP_DATASET_URL: &str = "https://raw.githubusercontent.com/iExecBlockchainComputing/tee-worker-pre-compute-rust/main/src/tests_resources/encrypted-data.bin";
     const IPFS_DATASET_URL: &str = "/ipfs/QmUVhChbLFiuzNK1g2GsWyWEiad7SXPqARnWzGumgziwEp";
     const PLAIN_DATA_FILE: &str = "plain-data.txt";
 
@@ -338,6 +341,21 @@ mod tests {
                 plain_dataset_filename: Some(PLAIN_DATA_FILE.to_string()),
             }),
         }
+    }
+
+    fn start_container() -> (Container<GenericImage>, String, String) {
+        let container = GenericImage::new("kennethreitz/httpbin", "latest")
+            .with_wait_for(WaitFor::message_on_stderr("Listening at"))
+            .start()
+            .expect("Failed to start Httpbin");
+        let port = container
+            .get_host_port_ipv4(80)
+            .expect("Could not get host port");
+
+        let json_url = format!("http://127.0.0.1:{port}/json");
+        let xml_url = format!("http://127.0.0.1:{port}/xml");
+
+        (container, json_url, xml_url)
     }
 
     // region check_output_folder
@@ -383,35 +401,39 @@ mod tests {
     // region download_input_files
     #[test]
     fn download_input_files_success_with_single_file() {
+        let (_container, json_url, _) = start_container();
+
         let temp_dir = TempDir::new().unwrap();
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
-            vec!["https://httpbin.org/json"],
+            vec![&json_url],
             temp_dir.path().to_str().unwrap(),
         );
 
         let result = app.download_input_files();
         assert!(result.is_ok());
 
-        let url_hash = sha256("https://httpbin.org/json".to_string());
+        let url_hash = sha256(json_url);
         let downloaded_file = temp_dir.path().join(url_hash);
         assert!(downloaded_file.exists());
     }
 
     #[test]
     fn download_input_files_success_with_multiple_files() {
+        let (_container, json_url, xml_url) = start_container();
+
         let temp_dir = TempDir::new().unwrap();
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
-            vec!["https://httpbin.org/json", "https://httpbin.org/xml"],
+            vec![&json_url, &xml_url],
             temp_dir.path().to_str().unwrap(),
         );
 
         let result = app.download_input_files();
         assert!(result.is_ok());
 
-        let json_hash = sha256("https://httpbin.org/json".to_string());
-        let xml_hash = sha256("https://httpbin.org/xml".to_string());
+        let json_hash = sha256(json_url);
+        let xml_hash = sha256(xml_url);
 
         assert!(temp_dir.path().join(json_hash).exists());
         assert!(temp_dir.path().join(xml_hash).exists());
@@ -435,13 +457,15 @@ mod tests {
 
     #[test]
     fn test_partial_failure_stops_on_first_error() {
+        let (_container, json_url, xml_url) = start_container();
+
         let temp_dir = TempDir::new().unwrap();
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
             vec![
-                "https://httpbin.org/json",                          // This should succeed
+                &json_url,                                           // This should succeed
                 "https://invalid-url-that-should-fail.com/file.txt", // This should fail
-                "https://httpbin.org/xml",                           // This shouldn't be reached
+                &xml_url,                                            // This shouldn't be reached
             ],
             temp_dir.path().to_str().unwrap(),
         );
@@ -453,11 +477,11 @@ mod tests {
         );
 
         // First file should be downloaded with SHA256 filename
-        let json_hash = sha256("https://httpbin.org/json".to_string());
+        let json_hash = sha256(json_url);
         assert!(temp_dir.path().join(json_hash).exists());
 
         // Third file should NOT be downloaded (stopped on second failure)
-        let xml_hash = sha256("https://httpbin.org/xml".to_string());
+        let xml_hash = sha256(xml_url);
         assert!(!temp_dir.path().join(xml_hash).exists());
     }
     // endregion
