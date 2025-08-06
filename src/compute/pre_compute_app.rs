@@ -476,7 +476,7 @@ mod tests {
     #[test]
     fn test_partial_failure_stops_on_first_error() {
         let (_container, json_url, xml_url) = start_container();
-        
+
         let temp_dir = TempDir::new().unwrap();
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
