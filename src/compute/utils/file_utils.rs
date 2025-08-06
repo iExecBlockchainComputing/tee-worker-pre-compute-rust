@@ -197,9 +197,9 @@ mod tests {
     use super::*;
     use std::io::Read;
     use tempfile::TempDir;
-    use testcontainers::core::{IntoContainerPort, WaitFor};
+    use testcontainers::core::WaitFor;
     use testcontainers::runners::SyncRunner;
-    use testcontainers::{GenericImage, ImageExt};
+    use testcontainers::{Container, GenericImage};
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -221,6 +221,20 @@ mod tests {
             actual_json, expected_json,
             "JSON content does not match the expected file"
         );
+    }
+
+    fn start_container() -> (Container<GenericImage>, String) {
+        let container = GenericImage::new("kennethreitz/httpbin", "latest")
+            .with_wait_for(WaitFor::message_on_stderr("Listening at"))
+            .start()
+            .expect("Failed to start Httpbin");
+        let port = container
+            .get_host_port_ipv4(80)
+            .expect("Could not get host port");
+
+        let container_url = format!("http://127.0.0.1:{port}/json");
+
+        (container, container_url)
     }
 
     // region download_file
@@ -247,17 +261,7 @@ mod tests {
 
     #[test]
     fn test_successful_download() {
-        let container = GenericImage::new("kennethreitz/httpbin", "latest")
-            .with_exposed_port(80.tcp())
-            .with_wait_for(WaitFor::message_on_stderr("Listening at"))
-            .with_network("bridge")
-            .with_env_var("DEBUG", "1")
-            .start()
-            .expect("Failed to start Httpbin");
-        let port = container
-            .get_host_port_ipv4(80)
-            .expect("Could not get host port");
-        let container_url = format!("http://127.0.0.1:{}/json", port);
+        let (_container, container_url) = start_container();
 
         let result = download_file(&container_url, PARENT_DIR, FILE_NAME);
         assert!(result.is_some());
@@ -273,17 +277,7 @@ mod tests {
 
     #[test]
     fn test_creates_parent_directory() {
-        let container = GenericImage::new("kennethreitz/httpbin", "latest")
-            .with_exposed_port(80.tcp())
-            .with_wait_for(WaitFor::message_on_stderr("Listening at"))
-            .with_network("bridge")
-            .with_env_var("DEBUG", "1")
-            .start()
-            .expect("Failed to start Httpbin");
-        let port = container
-            .get_host_port_ipv4(80)
-            .expect("Could not get host port");
-        let container_url = format!("http://127.0.0.1:{}/json", port);
+        let (_container, container_url) = start_container();
 
         let temp_dir = TempDir::new().unwrap();
         let nested_path = temp_dir.path().join("nested").join("deep");
@@ -302,17 +296,7 @@ mod tests {
     // region download_from_url
     #[test]
     fn test_download_from_url_success() {
-        let container = GenericImage::new("kennethreitz/httpbin", "latest")
-            .with_exposed_port(80.tcp())
-            .with_wait_for(WaitFor::message_on_stderr("Listening at"))
-            .with_network("bridge")
-            .with_env_var("DEBUG", "1")
-            .start()
-            .expect("Failed to start Httpbin");
-        let port = container
-            .get_host_port_ipv4(80)
-            .expect("Could not get host port");
-        let container_url = format!("http://127.0.0.1:{}/json", port);
+        let (_container, container_url) = start_container();
 
         let result = download_from_url(&container_url);
 

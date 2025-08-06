@@ -329,7 +329,7 @@ mod tests {
     use tempfile::TempDir;
     use testcontainers::core::{IntoContainerPort, WaitFor};
     use testcontainers::runners::SyncRunner;
-    use testcontainers::{GenericImage, ImageExt};
+    use testcontainers::{Container, GenericImage, ImageExt};
 
     const CHAIN_TASK_ID: &str = "0x123456789abcdef";
     const DATASET_CHECKSUM: &str =
@@ -356,6 +356,24 @@ mod tests {
                 plain_dataset_filename: Some(PLAIN_DATA_FILE.to_string()),
             }),
         }
+    }
+
+    fn start_container() -> (Container<GenericImage>, String, String) {
+        let container = GenericImage::new("kennethreitz/httpbin", "latest")
+            .with_exposed_port(80.tcp())
+            .with_wait_for(WaitFor::message_on_stderr("Listening at"))
+            .with_network("bridge")
+            .with_env_var("DEBUG", "1")
+            .start()
+            .expect("Failed to start Httpbin");
+        let port = container
+            .get_host_port_ipv4(80)
+            .expect("Could not get host port");
+
+        let json_url = format!("http://127.0.0.1:{port}/json");
+        let xml_url = format!("http://127.0.0.1:{port}/xml");
+
+        (container, json_url, xml_url)
     }
 
     // region check_output_folder
@@ -401,60 +419,39 @@ mod tests {
     // region download_input_files
     #[test]
     fn download_input_files_success_with_single_file() {
-        let container = GenericImage::new("kennethreitz/httpbin", "latest")
-            .with_exposed_port(80.tcp())
-            .with_wait_for(WaitFor::message_on_stderr("Listening at"))
-            .with_network("bridge")
-            .with_env_var("DEBUG", "1")
-            .start()
-            .expect("Failed to start Httpbin");
-        let port = container
-            .get_host_port_ipv4(80)
-            .expect("Could not get host port");
-        let container_url = format!("http://127.0.0.1:{}/json", port);
+        let (_container, json_url, _) = start_container();
 
         let temp_dir = TempDir::new().unwrap();
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
-            vec![&container_url],
+            vec![&json_url],
             temp_dir.path().to_str().unwrap(),
         );
 
         let result = app.download_input_files();
         assert!(result.is_ok());
 
-        let url_hash = sha256(container_url);
+        let url_hash = sha256(json_url);
         let downloaded_file = temp_dir.path().join(url_hash);
         assert!(downloaded_file.exists());
     }
 
     #[test]
     fn download_input_files_success_with_multiple_files() {
-        let container = GenericImage::new("kennethreitz/httpbin", "latest")
-            .with_exposed_port(80.tcp())
-            .with_wait_for(WaitFor::message_on_stderr("Listening at"))
-            .with_network("bridge")
-            .with_env_var("DEBUG", "1")
-            .start()
-            .expect("Failed to start Httpbin");
-        let port = container
-            .get_host_port_ipv4(80)
-            .expect("Could not get host port");
-        let container_url_json = format!("http://127.0.0.1:{}/json", port);
-        let container_url_xml = format!("http://127.0.0.1:{}/xml", port);
+        let (_container, json_url, xml_url) = start_container();
 
         let temp_dir = TempDir::new().unwrap();
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
-            vec![&container_url_json, &container_url_xml],
+            vec![&json_url, &xml_url],
             temp_dir.path().to_str().unwrap(),
         );
 
         let result = app.download_input_files();
         assert!(result.is_ok());
 
-        let json_hash = sha256(container_url_json);
-        let xml_hash = sha256(container_url_xml);
+        let json_hash = sha256(json_url);
+        let xml_hash = sha256(xml_url);
 
         assert!(temp_dir.path().join(json_hash).exists());
         assert!(temp_dir.path().join(xml_hash).exists());
@@ -478,26 +475,15 @@ mod tests {
 
     #[test]
     fn test_partial_failure_stops_on_first_error() {
-        let container = GenericImage::new("kennethreitz/httpbin", "latest")
-            .with_exposed_port(80.tcp())
-            .with_wait_for(WaitFor::message_on_stderr("Listening at"))
-            .with_network("bridge")
-            .with_env_var("DEBUG", "1")
-            .start()
-            .expect("Failed to start Httpbin");
-        let port = container
-            .get_host_port_ipv4(80)
-            .expect("Could not get host port");
-        let container_url_json = format!("http://127.0.0.1:{}/json", port);
-        let container_url_xml = format!("http://127.0.0.1:{}/xml", port);
-
+        let (_container, json_url, xml_url) = start_container();
+        
         let temp_dir = TempDir::new().unwrap();
         let app = get_pre_compute_app(
             CHAIN_TASK_ID,
             vec![
-                &container_url_json,                                 // This should succeed
+                &json_url,                                           // This should succeed
                 "https://invalid-url-that-should-fail.com/file.txt", // This should fail
-                &container_url_xml,                                  // This shouldn't be reached
+                &xml_url,                                            // This shouldn't be reached
             ],
             temp_dir.path().to_str().unwrap(),
         );
@@ -509,11 +495,11 @@ mod tests {
         );
 
         // First file should be downloaded with SHA256 filename
-        let json_hash = sha256(container_url_json);
+        let json_hash = sha256(json_url);
         assert!(temp_dir.path().join(json_hash).exists());
 
         // Third file should NOT be downloaded (stopped on second failure)
-        let xml_hash = sha256(container_url_xml);
+        let xml_hash = sha256(xml_url);
         assert!(!temp_dir.path().join(xml_hash).exists());
     }
     // endregion
