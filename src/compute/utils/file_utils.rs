@@ -197,12 +197,45 @@ mod tests {
     use super::*;
     use std::io::Read;
     use tempfile::TempDir;
+    use testcontainers::core::WaitFor;
+    use testcontainers::runners::SyncRunner;
+    use testcontainers::{Container, GenericImage};
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
+    const EXPECTED_DATA_PATH: &str = "src/tests_resources/httpbin.json";
     const URL: &str = "https://httpbin.org/json";
     const PARENT_DIR: &str = "/tmp";
     const FILE_NAME: &str = "test.json";
+
+    fn assert_json_eq_from_file(actual: &[u8], file_path: &str) {
+        let expected_bytes =
+            fs::read(Path::new(file_path)).expect("Failed to read expected JSON file");
+
+        let actual_json: serde_json::Value =
+            serde_json::from_slice(actual).expect("Actual response is not valid JSON");
+        let expected_json: serde_json::Value =
+            serde_json::from_slice(&expected_bytes).expect("Expected file is not valid JSON");
+
+        assert_eq!(
+            actual_json, expected_json,
+            "JSON content does not match the expected file"
+        );
+    }
+
+    fn start_container() -> (Container<GenericImage>, String) {
+        let container = GenericImage::new("kennethreitz/httpbin", "latest")
+            .with_wait_for(WaitFor::message_on_stderr("Listening at"))
+            .start()
+            .expect("Failed to start Httpbin");
+        let port = container
+            .get_host_port_ipv4(80)
+            .expect("Could not get host port");
+
+        let container_url = format!("http://127.0.0.1:{port}/json");
+
+        (container, container_url)
+    }
 
     // region download_file
     #[test]
@@ -228,55 +261,47 @@ mod tests {
 
     #[test]
     fn test_successful_download() {
-        let result = download_file(URL, PARENT_DIR, FILE_NAME);
+        let (_container, container_url) = start_container();
 
-        if let Some(path) = result {
-            assert!(path.exists());
-            assert!(path.is_file());
-            let content = fs::read_to_string(&path).unwrap();
-            assert!(content.contains("slideshow"));
-        }
+        let result = download_file(&container_url, PARENT_DIR, FILE_NAME);
+        assert!(result.is_some());
+
+        let path = result.unwrap();
+        assert!(path.is_file());
+
+        let content = fs::read(&path).unwrap();
+        assert_json_eq_from_file(&content, EXPECTED_DATA_PATH);
+
+        let _ = fs::remove_file(&path);
     }
 
     #[test]
     fn test_creates_parent_directory() {
+        let (_container, container_url) = start_container();
+
         let temp_dir = TempDir::new().unwrap();
         let nested_path = temp_dir.path().join("nested").join("deep");
 
-        let result = download_file(
-            "https://httpbin.org/json",
-            nested_path.to_str().unwrap(),
-            "test.json",
-        );
+        let result = download_file(&container_url, nested_path.to_str().unwrap(), "test.json");
+        assert!(result.is_some());
 
-        if let Some(path) = result {
-            assert!(path.exists());
-            assert!(nested_path.exists());
-        }
+        let path = result.unwrap();
+        assert!(path.exists());
+        assert!(nested_path.exists());
+
+        let _ = fs::remove_file(&path);
     }
     // endregion
 
     // region download_from_url
     #[test]
     fn test_download_from_url_success() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let expected_data = b"test data";
+        let (_container, container_url) = start_container();
 
-        let mock_server = rt.block_on(async {
-            let server = MockServer::start().await;
-            Mock::given(method("GET"))
-                .and(path("/test"))
-                .respond_with(ResponseTemplate::new(200).set_body_bytes(expected_data))
-                .mount(&server)
-                .await;
-            server
-        });
-
-        let server_uri = mock_server.uri();
-        let result = download_from_url(&format!("{}/test", server_uri));
+        let result = download_from_url(&container_url);
 
         assert!(result.is_some());
-        assert_eq!(result.unwrap(), expected_data);
+        assert_json_eq_from_file(&result.unwrap(), EXPECTED_DATA_PATH);
     }
 
     #[test]
