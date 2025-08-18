@@ -29,14 +29,33 @@ RUN cargo build --release --bin tee-worker-pre-compute
 # Stage 2: Runtime stage with minimal image
 FROM alpine:3.22.1 AS runtime
 
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    openssl \
+    libc6-compat
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
 # Set working directory
 WORKDIR /app
 
 # Copy the binary from builder stage
 COPY --from=builder /app/target/release/tee-worker-pre-compute /app/tee-worker-pre-compute
 
-# Expose port
-EXPOSE 3000
+# Copy any necessary runtime files
+COPY --from=builder /app/tests_resources/ ./tests_resources/ 2>/dev/null || true
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Set environment variables
+ENV RUST_LOG=info
 
 # Run the application
 CMD ["/app/tee-worker-pre-compute"]
