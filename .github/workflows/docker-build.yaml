@@ -1,7 +1,10 @@
 name: Build and Push OCI Image
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Rust CI"]
+    types:
+      - completed
     branches:
       - main
       - 'feature/*'
@@ -13,6 +16,8 @@ jobs:
   prepare:
     name: Determine Image Tag
     runs-on: ubuntu-latest
+    # Only run if the triggering workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     outputs:
       tag: ${{ steps.determine-tag.outputs.tag }}
     steps:
