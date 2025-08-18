@@ -1,39 +1,26 @@
-# Multi-stage Dockerfile for iExec tee-worker-pre-compute API
-# Stage 1: Build stage with Rust toolchain
-FROM rust:1.88-alpine3.20 AS builder
+FROM rust:1.88-alpine3.22 AS builder
 
 # Install build dependencies
-RUN apk add --no-cache \
-    openssl-dev \
-    musl-dev \
-    gcc \
-    libc-dev
+RUN apk add --no-cache musl-dev openssl-dev
 
 WORKDIR /app
 
-# Copy Cargo files first for better caching
-COPY Cargo.* /app/
-
-# Create a dummy main.rs to build dependencies
-RUN mkdir src && \
-    echo "fn main() {}" > src/main.rs && \
-    cargo build --release && \
-    rm -rf src
-
-# Copy source code
-COPY src/ /app/src/
+# Copy manifest and source files
+COPY . .
 
 # Build the application
-RUN cargo build --release --bin tee-worker-pre-compute
+RUN cargo build --release
 
-# Stage 2: Runtime stage with minimal image
-FROM alpine:3.22.1 AS runtime
+FROM alpine:3.22 AS runtime
+
+# Install runtime dependencies if needed
+RUN apk add --no-cache libgcc
 
 # Set working directory
 WORKDIR /app
 
 # Copy the binary from builder stage
-COPY --from=builder /app/target/release/tee-worker-pre-compute /app/tee-worker-pre-compute
+COPY --from=builder /app/target/release/tee-worker-pre-compute .
 
 # Run the application
 CMD ["/app/tee-worker-pre-compute"]
