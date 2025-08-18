@@ -26,11 +26,8 @@ jobs:
             TAG_NAME="${TAG_NAME#v}"  # Remove 'v' prefix using bash parameter expansion
           elif [[ "${{ github.ref_name }}" == "main" ]]; then
             TAG_NAME="dev-${SHORT_SHA}"
-          elif [[ "${{ github.ref_name }}" == feature/* ]] || [[ "${{ github.ref_name }}" == bugfix/* ]]; then
+          elif [[ "${{ github.ref_name }}" =~ ^feature/ ]] || [[ "${{ github.ref_name }}" =~ ^bugfix/ ]]; then
             TAG_NAME="feature-${SHORT_SHA}"
-          else
-            SLUG_REF_NAME=$(echo ${{ github.ref_name }} | tr '/' '-')
-            TAG_NAME="${SLUG_REF_NAME}-${SHORT_SHA}"
           fi
           
           echo "tag=${TAG_NAME}" >> "$GITHUB_OUTPUT"
