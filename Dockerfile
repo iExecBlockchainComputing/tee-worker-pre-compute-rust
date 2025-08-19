@@ -11,9 +11,9 @@ COPY . .
 # Build the application
 RUN cargo build --release
 
-FROM alpine:3.22 AS runtime
+FROM alpine:3.22
 
-# Install runtime dependencies if needed
+# Install required runtime dependencies
 RUN apk add --no-cache libgcc
 
 # Set working directory
