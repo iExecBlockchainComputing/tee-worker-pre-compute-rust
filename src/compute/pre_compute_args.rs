@@ -10,10 +10,10 @@ pub struct PreComputeArgs {
     pub output_dir: String,
     // Dataset related fields
     pub is_dataset_required: bool,
-    pub encrypted_dataset_url: Option<String>,
-    pub encrypted_dataset_base64_key: Option<String>,
-    pub encrypted_dataset_checksum: Option<String>,
-    pub plain_dataset_filename: Option<String>,
+    pub encrypted_dataset_url: String,
+    pub encrypted_dataset_base64_key: String,
+    pub encrypted_dataset_checksum: String,
+    pub plain_dataset_filename: String,
     // Input files
     pub input_files: Vec<String>,
 }
@@ -64,28 +64,28 @@ impl PreComputeArgs {
             .parse::<bool>()
             .map_err(|_| ReplicateStatusCause::PreComputeIsDatasetRequiredMissing)?;
 
-        let mut encrypted_dataset_url = None;
-        let mut encrypted_dataset_base64_key = None;
-        let mut encrypted_dataset_checksum = None;
-        let mut plain_dataset_filename = None;
+        let mut encrypted_dataset_url = String::new();
+        let mut encrypted_dataset_base64_key = String::new();
+        let mut encrypted_dataset_checksum = String::new();
+        let mut plain_dataset_filename = String::new();
 
         if is_dataset_required {
-            encrypted_dataset_url = Some(get_env_var_or_error(
+            encrypted_dataset_url = get_env_var_or_error(
                 TeeSessionEnvironmentVariable::IexecDatasetUrl,
                 ReplicateStatusCause::PreComputeDatasetUrlMissing,
-            )?);
-            encrypted_dataset_base64_key = Some(get_env_var_or_error(
+            )?;
+            encrypted_dataset_base64_key = get_env_var_or_error(
                 TeeSessionEnvironmentVariable::IexecDatasetKey,
                 ReplicateStatusCause::PreComputeDatasetKeyMissing,
-            )?);
-            encrypted_dataset_checksum = Some(get_env_var_or_error(
+            )?;
+            encrypted_dataset_checksum = get_env_var_or_error(
                 TeeSessionEnvironmentVariable::IexecDatasetChecksum,
                 ReplicateStatusCause::PreComputeDatasetChecksumMissing,
-            )?);
-            plain_dataset_filename = Some(get_env_var_or_error(
+            )?;
+            plain_dataset_filename = get_env_var_or_error(
                 TeeSessionEnvironmentVariable::IexecDatasetFilename,
                 ReplicateStatusCause::PreComputeDatasetFilenameMissing,
-            )?);
+            )?;
         }
 
         let input_files_nb_str = get_env_var_or_error(
@@ -178,10 +178,10 @@ mod tests {
 
             assert_eq!(args.output_dir, OUTPUT_DIR);
             assert!(!args.is_dataset_required);
-            assert_eq!(args.encrypted_dataset_url, None);
-            assert_eq!(args.encrypted_dataset_base64_key, None);
-            assert_eq!(args.encrypted_dataset_checksum, None);
-            assert_eq!(args.plain_dataset_filename, None);
+            assert_eq!(args.encrypted_dataset_url, "");
+            assert_eq!(args.encrypted_dataset_base64_key, "");
+            assert_eq!(args.encrypted_dataset_checksum, "");
+            assert_eq!(args.plain_dataset_filename, "");
             assert_eq!(args.input_files.len(), 1);
             assert_eq!(args.input_files[0], "https://input-1.txt");
         });
@@ -202,19 +202,13 @@ mod tests {
 
             assert_eq!(args.output_dir, OUTPUT_DIR);
             assert!(args.is_dataset_required);
-            assert_eq!(args.encrypted_dataset_url, Some(DATASET_URL.to_string()));
-            assert_eq!(
-                args.encrypted_dataset_base64_key,
-                Some(DATASET_KEY.to_string())
-            );
+            assert_eq!(args.encrypted_dataset_url, DATASET_URL.to_string());
+            assert_eq!(args.encrypted_dataset_base64_key, DATASET_KEY.to_string());
             assert_eq!(
                 args.encrypted_dataset_checksum,
-                Some(DATASET_CHECKSUM.to_string())
+                DATASET_CHECKSUM.to_string()
             );
-            assert_eq!(
-                args.plain_dataset_filename,
-                Some(DATASET_FILENAME.to_string())
-            );
+            assert_eq!(args.plain_dataset_filename, DATASET_FILENAME.to_string());
             assert_eq!(args.input_files.len(), 0);
         });
     }
@@ -235,10 +229,10 @@ mod tests {
 
             assert_eq!(args.output_dir, OUTPUT_DIR);
             assert!(!args.is_dataset_required);
-            assert_eq!(args.encrypted_dataset_url, None);
-            assert_eq!(args.encrypted_dataset_base64_key, None);
-            assert_eq!(args.encrypted_dataset_checksum, None);
-            assert_eq!(args.plain_dataset_filename, None);
+            assert_eq!(args.encrypted_dataset_url, "");
+            assert_eq!(args.encrypted_dataset_base64_key, "");
+            assert_eq!(args.encrypted_dataset_checksum, "");
+            assert_eq!(args.plain_dataset_filename, "");
             assert_eq!(args.input_files.len(), 3);
             assert_eq!(args.input_files[0], "https://input-1.txt");
             assert_eq!(args.input_files[1], "https://input-2.txt");
