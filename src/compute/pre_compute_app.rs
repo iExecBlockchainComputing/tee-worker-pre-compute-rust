@@ -163,8 +163,8 @@ impl PreComputeAppTrait for PreComputeApp {
     /// ```
     fn download_encrypted_dataset(&self) -> Result<Vec<u8>, ReplicateStatusCause> {
         let args = self.pre_compute_args.as_ref().unwrap();
-        let chain_task_id = self.chain_task_id.as_ref().unwrap();
-        let encrypted_dataset_url = &args.encrypted_dataset_url;
+        let chain_task_id: &str = self.chain_task_id.as_ref().unwrap();
+        let encrypted_dataset_url: &str = &args.encrypted_dataset_url;
 
         info!(
             "Downloading encrypted dataset file [chainTaskId:{chain_task_id}, url:{encrypted_dataset_url}]",
@@ -189,7 +189,7 @@ impl PreComputeAppTrait for PreComputeApp {
         .ok_or(ReplicateStatusCause::PreComputeDatasetDownloadFailed)?;
 
         info!("Checking encrypted dataset checksum [chainTaskId:{chain_task_id}]");
-        let expected_checksum = &args.encrypted_dataset_checksum;
+        let expected_checksum: &str = &args.encrypted_dataset_checksum;
         let actual_checksum = sha256_from_bytes(&encrypted_content);
 
         if actual_checksum != args.encrypted_dataset_checksum {
@@ -228,7 +228,7 @@ impl PreComputeAppTrait for PreComputeApp {
     /// let decrypted = app.decrypt_dataset(&encrypted)?;
     /// ```
     fn decrypt_dataset(&self, encrypted_content: &[u8]) -> Result<Vec<u8>, ReplicateStatusCause> {
-        let base64_key = &self
+        let base64_key: &str = &self
             .pre_compute_args
             .as_ref()
             .unwrap()
@@ -275,10 +275,10 @@ impl PreComputeAppTrait for PreComputeApp {
     /// app.save_plain_dataset_file(&plain_data)?;
     /// ```
     fn save_plain_dataset_file(&self, plain_dataset: &[u8]) -> Result<(), ReplicateStatusCause> {
-        let chain_task_id = self.chain_task_id.as_ref().unwrap();
+        let chain_task_id: &str = self.chain_task_id.as_ref().unwrap();
         let args = self.pre_compute_args.as_ref().unwrap();
-        let output_dir = &args.output_dir;
-        let plain_dataset_filename = &args.plain_dataset_filename;
+        let output_dir: &str = &args.output_dir;
+        let plain_dataset_filename: &str = &args.plain_dataset_filename;
 
         let mut path = PathBuf::from(output_dir);
         path.push(plain_dataset_filename);
