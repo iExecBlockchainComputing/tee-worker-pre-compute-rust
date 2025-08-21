@@ -48,12 +48,12 @@ jobs:
       image-tag: ${{ needs.prepare.outputs.tag }}
       dockerfile: Dockerfile
       context: .
-      platforms: linux/amd64
       registry: docker-regis.iex.ec
       push: true
       security-scan: true
       security-report: "sarif"
       hadolint: true
+      platforms: linux/amd64
     secrets:
       username: ${{ secrets.NEXUS_USERNAME }}
       password: ${{ secrets.NEXUS_PASSWORD }}

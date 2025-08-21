@@ -20,7 +20,7 @@ jobs:
       - name: Determine Docker tag based on Git ref
         id: determine-tag
         run: |
-          # Since this workflow only triggers on tags matching 'v*.*.*' we know we're always dealing with a version tag, we know we're always dealing with a version tag
+          # Since this workflow only triggers on tags matching 'v*.*.*' we know we're always dealing with a version tag
           TAG_BRANCHES=$(git branch -r --contains ${{ github.sha }} | grep -E '(origin/main|origin/master)' || true)
 
           if [[ -n "$TAG_BRANCHES" ]]; then
@@ -45,12 +45,12 @@ jobs:
       image-tag: ${{ needs.prepare.outputs.tag }}
       dockerfile: Dockerfile
       context: .
-      platforms: linux/amd64
       registry: docker-regis.iex.ec
       push: true
       security-scan: true
       security-report: "sarif"
       hadolint: true
+      platforms: linux/amd64
     secrets:
       username: ${{ secrets.NEXUS_USERNAME }}
       password: ${{ secrets.NEXUS_PASSWORD }}
