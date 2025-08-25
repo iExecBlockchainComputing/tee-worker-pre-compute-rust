@@ -23,4 +23,4 @@ WORKDIR /app
 COPY --from=builder /app/target/release/tee-worker-pre-compute .
 
 # Run the application
-CMD ["/app/tee-worker-pre-compute"]
+ENTRYPOINT ["/app/tee-worker-pre-compute"]
