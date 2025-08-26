@@ -43,7 +43,7 @@ jobs:
   build-and-publish:
     name: Build and Publish to Registry
     needs: prepare
-    uses: iExecBlockchainComputing/github-actions-workflows/.github/workflows/docker-build.yml@main
+    uses: iExecBlockchainComputing/github-actions-workflows/.github/workflows/docker-build.yml@v2.4.0
     with:
       image-name: docker-regis.iex.ec/tee-worker-pre-compute-rust
       image-tag: ${{ needs.prepare.outputs.tag }}
