@@ -576,7 +576,8 @@ mod tests {
         let output_path = temp_dir.path().to_str().unwrap();
 
         let mut app = get_pre_compute_app(CHAIN_TASK_ID, vec![], output_path);
-        app.pre_compute_args.plain_dataset_filename = Some("/some-folder-123/not-found".to_string());
+        app.pre_compute_args.plain_dataset_filename =
+            Some("/some-folder-123/not-found".to_string());
         let plain_dataset = "Some very useful data.".as_bytes().to_vec();
         let saved_dataset = app.save_plain_dataset_file(&plain_dataset);
 

@@ -101,11 +101,13 @@ pub fn start() -> ExitMode {
         };
     let pre_compute_args = match PreComputeArgs::read_args() {
         Ok(pre_compute_args) => pre_compute_args,
-        Err(_) => { return ExitMode::InitializationFailure; }
+        Err(_) => {
+            return ExitMode::InitializationFailure;
+        }
     };
 
-    let pre_compute_app = PreComputeApp::new(chain_task_id.clone(),pre_compute_args);
-    start_with_app(&pre_compute_app,&chain_task_id)
+    let pre_compute_app = PreComputeApp::new(chain_task_id.clone(), pre_compute_args);
+    start_with_app(&pre_compute_app, &chain_task_id)
 }
 
 #[cfg(test)]
@@ -166,7 +168,7 @@ mod pre_compute_start_with_app_tests {
         temp_env::with_vars(env_vars_to_set, || {
             temp_env::with_vars_unset(env_vars_to_unset, || {
                 assert_eq!(
-                    start_with_app(&mock,CHAIN_TASK_ID),
+                    start_with_app(&mock, CHAIN_TASK_ID),
                     ExitMode::UnreportedFailure,
                     "Should return 2 if get_challenge fails due to missing signer address"
                 );
