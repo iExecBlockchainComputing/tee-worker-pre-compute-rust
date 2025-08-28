@@ -33,8 +33,8 @@ pub enum ExitMode {
 /// ```
 /// use crate::app_runner::start;
 /// use crate::pre_compute_app::PreComputeApp;
-/// 
-/// let chain_task_id = ;
+///
+/// let chain_task_id = "0x123456789abcdef";
 /// let pre_compute_args = match PreComputeArgs::read_args() {
 ///     Ok(pre_compute_args) => pre_compute_args,
 ///     Err(_) => {
