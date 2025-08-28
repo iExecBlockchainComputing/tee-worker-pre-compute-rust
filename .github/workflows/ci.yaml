@@ -19,14 +19,22 @@ jobs:
     name: Determine Image Tag
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: github.ref_name == 'main' || startsWith(github.head_ref, 'feature/') || startsWith(github.head_ref, 'bugfix/')
+    if: |
+      github.ref_name == 'main' ||
+      startsWith(github.head_ref, 'feature/') ||
+      startsWith(github.head_ref, 'bugfix/') ||
+      (github.event_name == 'workflow_dispatch' && (startsWith(github.ref_name, 'feature/') || startsWith(github.ref_name, 'bugfix/')))
     outputs:
       tag: ${{ steps.determine-tag.outputs.tag }}
     steps:
       - name: Determine Docker tag based on Git ref
         id: determine-tag
         run: |
-          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            SHORT_SHA=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-8)
+          else
+            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          fi
 
           if [[ "${{ github.ref_name }}" == "main" ]]; then
             TAG_NAME="dev-${SHORT_SHA}"
