@@ -48,10 +48,7 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> ExitMod
         match get_env_var_or_error(IexecTaskId, ReplicateStatusCause::PreComputeTaskIdMissing) {
             Ok(id) => id,
             Err(e) => {
-                error!(
-                    "TEE pre-compute cannot proceed without taskID context: {:?}",
-                    e
-                );
+                error!("TEE pre-compute cannot proceed without taskID context: {e:?}");
                 return ExitMode::InitializationFailure;
             }
         };
@@ -62,17 +59,14 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> ExitMod
             return ExitMode::Success;
         }
         Err(exit_cause) => {
-            error!(
-                "TEE pre-compute failed with known exit cause [{:?}]",
-                exit_cause
-            );
+            error!("TEE pre-compute failed with known exit cause [{exit_cause:?}]");
         }
     }
 
     let authorization = match get_challenge(&chain_task_id) {
         Ok(auth) => auth,
         Err(_) => {
-            error!("Failed to sign exitCause message [{:?}]", exit_cause);
+            error!("Failed to sign exitCause message [{exit_cause:?}]");
             return ExitMode::UnreportedFailure;
         }
     };
@@ -88,7 +82,7 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> ExitMod
     ) {
         Ok(_) => ExitMode::ReportedFailure,
         Err(_) => {
-            error!("Failed to report exitCause [{:?}]", exit_cause);
+            error!("Failed to report exitCause [{exit_cause:?}]");
             ExitMode::UnreportedFailure
         }
     }
@@ -197,7 +191,7 @@ mod pre_compute_start_with_app_tests {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("POST"))
-            .and(path(format!("/compute/pre/{}/exit", CHAIN_TASK_ID)))
+            .and(path(format!("/compute/pre/{CHAIN_TASK_ID}/exit")))
             .respond_with(ResponseTemplate::new(500))
             .mount(&mock_server)
             .await;
@@ -243,7 +237,7 @@ mod pre_compute_start_with_app_tests {
 
         // Mock the worker API to return success
         Mock::given(method("POST"))
-            .and(path(format!("/compute/pre/{}/exit", CHAIN_TASK_ID)))
+            .and(path(format!("/compute/pre/{CHAIN_TASK_ID}/exit")))
             .and(body_json(expected_exit_message_payload))
             .respond_with(ResponseTemplate::new(200))
             .mount(&mock_server)
