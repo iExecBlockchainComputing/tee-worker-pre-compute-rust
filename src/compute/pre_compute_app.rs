@@ -192,7 +192,7 @@ impl PreComputeAppTrait for PreComputeApp {
         let expected_checksum: &str = &args.encrypted_dataset_checksum;
         let actual_checksum = sha256_from_bytes(&encrypted_content);
 
-        if actual_checksum != args.encrypted_dataset_checksum {
+        if actual_checksum != expected_checksum {
             error!(
                 "Invalid dataset checksum [chainTaskId:{chain_task_id}, expected:{expected_checksum}, actual:{actual_checksum}]"
             );
