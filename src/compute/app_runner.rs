@@ -33,9 +33,17 @@ pub enum ExitMode {
 /// ```
 /// use crate::app_runner::start;
 /// use crate::pre_compute_app::PreComputeApp;
+/// 
+/// let chain_task_id = ;
+/// let pre_compute_args = match PreComputeArgs::read_args() {
+///     Ok(pre_compute_args) => pre_compute_args,
+///     Err(_) => {
+///         return ExitMode::InitializationFailure;
+///     }
+/// };
 ///
-/// let pre_compute_app = PreComputeApp::new();
-/// let exit_code = start_with_app(pre_compute_app);
+/// let pre_compute_app = PreComputeApp::new(pre_compute_args, chain_task_id);
+/// let exit_code = start_with_app(&pre_compute_app, &chain_task_id)
 /// ```
 pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &A, chain_task_id: &str) -> ExitMode {
     let exit_cause = ReplicateStatusCause::PreComputeFailedUnknownIssue;
