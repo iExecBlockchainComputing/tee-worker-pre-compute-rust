@@ -27,33 +27,24 @@ pub enum ExitMode {
 /// It uses the provided app to execute core operations and handles all the
 /// workflow states and transitions.
 ///
-/// # Arguments
-///
-/// * `pre_compute_app` - An implementation of [`PreComputeAppTrait`] that will be used to execute the pre-compute operations.
-///
 /// # Example
 ///
 /// ```
 /// use crate::app_runner::start;
 /// use crate::pre_compute_app::PreComputeApp;
 ///
-/// let pre_compute_app = PreComputeApp::new();
-/// let exit_code = start_with_app(pre_compute_app);
+/// let chain_task_id = "0x123456789abcdef".to_string();
+/// let mut pre_compute_app = PreComputeApp::new(chain_task_id.clone());
+///
+/// let exit_code = start_with_app(&pre_compute_app, &chain_task_id)
 /// ```
-pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> ExitMode {
-    info!("TEE pre-compute started");
-
+pub fn start_with_app<A: PreComputeAppTrait>(
+    pre_compute_app: &mut A,
+    chain_task_id: &str,
+) -> ExitMode {
     let exit_cause = ReplicateStatusCause::PreComputeFailedUnknownIssue;
-    let chain_task_id =
-        match get_env_var_or_error(IexecTaskId, ReplicateStatusCause::PreComputeTaskIdMissing) {
-            Ok(id) => id,
-            Err(e) => {
-                error!("TEE pre-compute cannot proceed without taskID context: {e:?}");
-                return ExitMode::InitializationFailure;
-            }
-        };
 
-    match pre_compute_app.run(&chain_task_id) {
+    match pre_compute_app.run() {
         Ok(_) => {
             info!("TEE pre-compute completed");
             return ExitMode::Success;
@@ -63,7 +54,7 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> ExitMod
         }
     }
 
-    let authorization = match get_challenge(&chain_task_id) {
+    let authorization = match get_challenge(chain_task_id) {
         Ok(auth) => auth,
         Err(_) => {
             error!("Failed to sign exitCause message [{exit_cause:?}]");
@@ -77,7 +68,7 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> ExitMod
 
     match WorkerApiClient::from_env().send_exit_cause_for_pre_compute_stage(
         &authorization,
-        &chain_task_id,
+        chain_task_id,
         &exit_message,
     ) {
         Ok(_) => ExitMode::ReportedFailure,
@@ -102,8 +93,19 @@ pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &mut A) -> ExitMod
 /// std::process::exit(exit_code);
 /// ```
 pub fn start() -> ExitMode {
-    let mut pre_compute_app = PreComputeApp::new();
-    start_with_app(&mut pre_compute_app)
+    info!("TEE pre-compute started");
+
+    let chain_task_id =
+        match get_env_var_or_error(IexecTaskId, ReplicateStatusCause::PreComputeTaskIdMissing) {
+            Ok(id) => id,
+            Err(e) => {
+                error!("TEE pre-compute cannot proceed without taskID context: {e:?}");
+                return ExitMode::InitializationFailure;
+            }
+        };
+    let mut pre_compute_app = PreComputeApp::new(chain_task_id.clone());
+
+    start_with_app(&mut pre_compute_app, &chain_task_id)
 }
 
 #[cfg(test)]
@@ -116,13 +118,17 @@ mod pre_compute_start_with_app_tests {
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     const CHAIN_TASK_ID: &str = "0x123456789abcdef";
-    const WORKER_ADDRESS: &str = "0xabcdef123456789";
     const ENCLAVE_CHALLENGE_PRIVATE_KEY: &str =
         "0xdd3b993ec21c71c1f6d63a5240850e0d4d8dd83ff70d29e49247958548c1d479";
     const ENV_IEXEC_TASK_ID: &str = "IEXEC_TASK_ID";
     const ENV_SIGN_WORKER_ADDRESS: &str = "SIGN_WORKER_ADDRESS";
     const ENV_SIGN_TEE_CHALLENGE_PRIVATE_KEY: &str = "SIGN_TEE_CHALLENGE_PRIVATE_KEY";
     const ENV_WORKER_HOST: &str = "WORKER_HOST_ENV_VAR";
+    const IEXEC_INPUT_FILES_NUMBER: &str = "IEXEC_INPUT_FILES_NUMBER";
+    const IEXEC_PRE_COMPUTE_OUT: &str = "IEXEC_PRE_COMPUTE_OUT";
+    const IS_DATASET_REQUIRED: &str = "IS_DATASET_REQUIRED";
+    const OUTPUT_DIR: &str = "/iexec_out";
+    const WORKER_ADDRESS: &str = "0xabcdef123456789";
 
     #[test]
     fn start_fails_when_task_id_missing() {
@@ -148,13 +154,12 @@ mod pre_compute_start_with_app_tests {
 
         let mut mock = MockPreComputeAppTrait::new();
         mock.expect_run()
-            .withf(|chain_task_id| chain_task_id == CHAIN_TASK_ID)
-            .returning(|_| Err(ReplicateStatusCause::PreComputeWorkerAddressMissing));
+            .returning(|| Err(ReplicateStatusCause::PreComputeWorkerAddressMissing));
 
         temp_env::with_vars(env_vars_to_set, || {
             temp_env::with_vars_unset(env_vars_to_unset, || {
                 assert_eq!(
-                    start_with_app(&mut mock),
+                    start_with_app(&mut mock, CHAIN_TASK_ID),
                     ExitMode::UnreportedFailure,
                     "Should return 2 if get_challenge fails due to missing signer address"
                 );
@@ -172,13 +177,12 @@ mod pre_compute_start_with_app_tests {
 
         let mut mock = MockPreComputeAppTrait::new();
         mock.expect_run()
-            .withf(|chain_task_id| chain_task_id == CHAIN_TASK_ID)
-            .returning(|_| Err(ReplicateStatusCause::PreComputeTeeChallengePrivateKeyMissing));
+            .returning(|| Err(ReplicateStatusCause::PreComputeTeeChallengePrivateKeyMissing));
 
         temp_env::with_vars(env_vars_to_set, || {
             temp_env::with_vars_unset(env_vars_to_unset, || {
                 assert_eq!(
-                    start_with_app(&mut mock),
+                    start_with_app(&mut mock, CHAIN_TASK_ID),
                     ExitMode::UnreportedFailure,
                     "Should return 2 if get_challenge fails due to missing private key"
                 );
@@ -200,8 +204,7 @@ mod pre_compute_start_with_app_tests {
 
         let mut mock = MockPreComputeAppTrait::new();
         mock.expect_run()
-            .withf(|chain_task_id| chain_task_id == CHAIN_TASK_ID)
-            .returning(|_| Err(ReplicateStatusCause::PreComputeTeeChallengePrivateKeyMissing));
+            .returning(|| Err(ReplicateStatusCause::PreComputeTeeChallengePrivateKeyMissing));
 
         let result_code = tokio::task::spawn_blocking(move || {
             let env_vars = vec![
@@ -214,7 +217,7 @@ mod pre_compute_start_with_app_tests {
                 (ENV_WORKER_HOST, Some(mock_server_addr_string.as_str())),
             ];
 
-            temp_env::with_vars(env_vars, || start_with_app(&mut mock))
+            temp_env::with_vars(env_vars, || start_with_app(&mut mock, CHAIN_TASK_ID))
         })
         .await
         .expect("Blocking task panicked");
@@ -247,8 +250,7 @@ mod pre_compute_start_with_app_tests {
 
         let mut mock = MockPreComputeAppTrait::new();
         mock.expect_run()
-            .withf(|chain_task_id| chain_task_id == CHAIN_TASK_ID)
-            .returning(|_| Err(ReplicateStatusCause::PreComputeTeeChallengePrivateKeyMissing));
+            .returning(|| Err(ReplicateStatusCause::PreComputeTeeChallengePrivateKeyMissing));
 
         // Move the blocking operations into spawn_blocking
         let result_code = tokio::task::spawn_blocking(move || {
@@ -260,9 +262,12 @@ mod pre_compute_start_with_app_tests {
                     Some(ENCLAVE_CHALLENGE_PRIVATE_KEY),
                 ),
                 (ENV_WORKER_HOST, Some(mock_server_addr_string.as_str())),
+                (IEXEC_INPUT_FILES_NUMBER, Some("0")),
+                (IEXEC_PRE_COMPUTE_OUT, Some(OUTPUT_DIR)),
+                (IS_DATASET_REQUIRED, Some("false")),
             ];
 
-            temp_env::with_vars(env_vars, || start_with_app(&mut mock))
+            temp_env::with_vars(env_vars, start)
         })
         .await
         .expect("Blocking task panicked");
