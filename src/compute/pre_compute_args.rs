@@ -5,7 +5,8 @@ use crate::compute::utils::env_utils::{TeeSessionEnvironmentVariable, get_env_va
 ///
 /// This structure aggregates configuration parameters from environment variables and task context,
 /// providing a validated interface for subsequent computation phases.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(test, derive(Debug))]
+#[derive(Clone, Default)]
 pub struct PreComputeArgs {
     pub output_dir: String,
     // Dataset related fields
