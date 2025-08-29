@@ -26,7 +26,7 @@ const AES_IV_LENGTH: usize = 16;
 
 #[cfg_attr(test, automock)]
 pub trait PreComputeAppTrait {
-    fn run(&self) -> Result<(), ReplicateStatusCause>;
+    fn run(&mut self) -> Result<(), ReplicateStatusCause>;
     fn check_output_folder(&self) -> Result<(), ReplicateStatusCause>;
     fn download_input_files(&self) -> Result<(), ReplicateStatusCause>;
     fn download_encrypted_dataset(&self) -> Result<Vec<u8>, ReplicateStatusCause>;
@@ -40,16 +40,17 @@ pub struct PreComputeApp {
 }
 
 impl PreComputeApp {
-    pub fn new(chain_task_id: String, pre_compute_args: PreComputeArgs) -> Self {
+    pub fn new(chain_task_id: String) -> Self {
         PreComputeApp {
             chain_task_id,
-            pre_compute_args,
+            pre_compute_args: PreComputeArgs::default(),
         }
     }
 }
 
 impl PreComputeAppTrait for PreComputeApp {
-    fn run(&self) -> Result<(), ReplicateStatusCause> {
+    fn run(&mut self) -> Result<(), ReplicateStatusCause> {
+        self.pre_compute_args = PreComputeArgs::read_args()?;
         self.check_output_folder()?;
         if self.pre_compute_args.is_dataset_required {
             let encrypted_content = self.download_encrypted_dataset()?;

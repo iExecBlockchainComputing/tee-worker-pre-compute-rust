@@ -1,6 +1,5 @@
 use crate::api::worker_api::{ExitMessage, WorkerApiClient};
 use crate::compute::pre_compute_app::{PreComputeApp, PreComputeAppTrait};
-use crate::compute::pre_compute_args::PreComputeArgs;
 use crate::compute::{
     errors::ReplicateStatusCause,
     signer::get_challenge,
@@ -40,7 +39,10 @@ pub enum ExitMode {
 /// let pre_compute_app = PreComputeApp::new(pre_compute_args, chain_task_id);
 /// let exit_code = start_with_app(&pre_compute_app, &chain_task_id)
 /// ```
-pub fn start_with_app<A: PreComputeAppTrait>(pre_compute_app: &A, chain_task_id: &str) -> ExitMode {
+pub fn start_with_app<A: PreComputeAppTrait>(
+    pre_compute_app: &mut A,
+    chain_task_id: &str,
+) -> ExitMode {
     let exit_cause = ReplicateStatusCause::PreComputeFailedUnknownIssue;
 
     match pre_compute_app.run() {
@@ -102,15 +104,9 @@ pub fn start() -> ExitMode {
                 return ExitMode::InitializationFailure;
             }
         };
-    let pre_compute_args = match PreComputeArgs::read_args() {
-        Ok(pre_compute_args) => pre_compute_args,
-        Err(_) => {
-            return ExitMode::InitializationFailure;
-        }
-    };
+    let mut pre_compute_app = PreComputeApp::new(chain_task_id.clone());
 
-    let pre_compute_app = PreComputeApp::new(chain_task_id.clone(), pre_compute_args);
-    start_with_app(&pre_compute_app, &chain_task_id)
+    start_with_app(&mut pre_compute_app, &chain_task_id)
 }
 
 #[cfg(test)]
@@ -134,17 +130,6 @@ mod pre_compute_start_with_app_tests {
     const IS_DATASET_REQUIRED: &str = "IS_DATASET_REQUIRED";
     const OUTPUT_DIR: &str = "/iexec_out";
     const WORKER_ADDRESS: &str = "0xabcdef123456789";
-
-    #[test]
-    fn start_fails_when_read_args_fails() {
-        temp_env::with_vars([(ENV_IEXEC_TASK_ID, Some(CHAIN_TASK_ID))], || {
-            assert_eq!(
-                start(),
-                ExitMode::InitializationFailure,
-                "Should return 3 if IEXEC_TASK_ID is missing"
-            );
-        });
-    }
 
     #[test]
     fn start_fails_when_task_id_missing() {
@@ -175,7 +160,7 @@ mod pre_compute_start_with_app_tests {
         temp_env::with_vars(env_vars_to_set, || {
             temp_env::with_vars_unset(env_vars_to_unset, || {
                 assert_eq!(
-                    start_with_app(&mock, CHAIN_TASK_ID),
+                    start_with_app(&mut mock, CHAIN_TASK_ID),
                     ExitMode::UnreportedFailure,
                     "Should return 2 if get_challenge fails due to missing signer address"
                 );
@@ -198,7 +183,7 @@ mod pre_compute_start_with_app_tests {
         temp_env::with_vars(env_vars_to_set, || {
             temp_env::with_vars_unset(env_vars_to_unset, || {
                 assert_eq!(
-                    start_with_app(&mock, CHAIN_TASK_ID),
+                    start_with_app(&mut mock, CHAIN_TASK_ID),
                     ExitMode::UnreportedFailure,
                     "Should return 2 if get_challenge fails due to missing private key"
                 );
@@ -233,7 +218,7 @@ mod pre_compute_start_with_app_tests {
                 (ENV_WORKER_HOST, Some(mock_server_addr_string.as_str())),
             ];
 
-            temp_env::with_vars(env_vars, || start_with_app(&mock, CHAIN_TASK_ID))
+            temp_env::with_vars(env_vars, || start_with_app(&mut mock, CHAIN_TASK_ID))
         })
         .await
         .expect("Blocking task panicked");
