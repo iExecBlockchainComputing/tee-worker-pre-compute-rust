@@ -220,9 +220,7 @@ impl PreComputeAppTrait for PreComputeApp {
     /// let decrypted = app.decrypt_dataset(&encrypted)?;
     /// ```
     fn decrypt_dataset(&self, encrypted_content: &[u8]) -> Result<Vec<u8>, ReplicateStatusCause> {
-        let base64_key: &str = &self
-            .pre_compute_args
-            .encrypted_dataset_base64_key;
+        let base64_key: &str = &self.pre_compute_args.encrypted_dataset_base64_key;
 
         let key = general_purpose::STANDARD
             .decode(base64_key)
@@ -494,8 +492,7 @@ mod tests {
     #[test]
     fn download_encrypted_dataset_failure_with_invalid_gateway() {
         let mut app = get_pre_compute_app(CHAIN_TASK_ID, vec![], "");
-        app.pre_compute_args.encrypted_dataset_url =
-            "/ipfs/INVALID_IPFS_DATASET_URL".to_string();
+        app.pre_compute_args.encrypted_dataset_url = "/ipfs/INVALID_IPFS_DATASET_URL".to_string();
         let actual_content = app.download_encrypted_dataset();
         let expected_content = Err(ReplicateStatusCause::PreComputeDatasetDownloadFailed);
         assert_eq!(actual_content, expected_content);
@@ -504,8 +501,7 @@ mod tests {
     #[test]
     fn download_encrypted_dataset_failure_with_invalid_dataset_checksum() {
         let mut app = get_pre_compute_app(CHAIN_TASK_ID, vec![], "");
-        app.pre_compute_args.encrypted_dataset_checksum =
-            "invalid_dataset_checksum".to_string();
+        app.pre_compute_args.encrypted_dataset_checksum = "invalid_dataset_checksum".to_string();
         let actual_content = app.download_encrypted_dataset();
         let expected_content = Err(ReplicateStatusCause::PreComputeInvalidDatasetChecksum);
         assert_eq!(actual_content, expected_content);
@@ -571,8 +567,7 @@ mod tests {
         let output_path = temp_dir.path().to_str().unwrap();
 
         let mut app = get_pre_compute_app(CHAIN_TASK_ID, vec![], output_path);
-        app.pre_compute_args.plain_dataset_filename =
-            "/some-folder-123/not-found".to_string();
+        app.pre_compute_args.plain_dataset_filename = "/some-folder-123/not-found".to_string();
         let plain_dataset = "Some very useful data.".as_bytes().to_vec();
         let saved_dataset = app.save_plain_dataset_file(&plain_dataset);
 
