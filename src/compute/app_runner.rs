@@ -35,12 +35,7 @@ pub enum ExitMode {
 /// use crate::pre_compute_app::PreComputeApp;
 ///
 /// let chain_task_id = "0x123456789abcdef";
-/// let pre_compute_args = match PreComputeArgs::read_args() {
-///     Ok(pre_compute_args) => pre_compute_args,
-///     Err(_) => {
-///         return ExitMode::InitializationFailure;
-///     }
-/// };
+/// let pre_compute_args = PreComputeArgs::read_args()?;
 ///
 /// let pre_compute_app = PreComputeApp::new(pre_compute_args, chain_task_id);
 /// let exit_code = start_with_app(&pre_compute_app, &chain_task_id)
@@ -128,13 +123,17 @@ mod pre_compute_start_with_app_tests {
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     const CHAIN_TASK_ID: &str = "0x123456789abcdef";
-    const WORKER_ADDRESS: &str = "0xabcdef123456789";
     const ENCLAVE_CHALLENGE_PRIVATE_KEY: &str =
         "0xdd3b993ec21c71c1f6d63a5240850e0d4d8dd83ff70d29e49247958548c1d479";
     const ENV_IEXEC_TASK_ID: &str = "IEXEC_TASK_ID";
     const ENV_SIGN_WORKER_ADDRESS: &str = "SIGN_WORKER_ADDRESS";
     const ENV_SIGN_TEE_CHALLENGE_PRIVATE_KEY: &str = "SIGN_TEE_CHALLENGE_PRIVATE_KEY";
     const ENV_WORKER_HOST: &str = "WORKER_HOST_ENV_VAR";
+    const IEXEC_INPUT_FILES_NUMBER: &str = "IEXEC_INPUT_FILES_NUMBER";
+    const IEXEC_PRE_COMPUTE_OUT: &str = "IEXEC_PRE_COMPUTE_OUT";
+    const IS_DATASET_REQUIRED: &str = "IS_DATASET_REQUIRED";
+    const OUTPUT_DIR: &str = "/iexec_out";
+    const WORKER_ADDRESS: &str = "0xabcdef123456789";
 
     #[test]
     fn start_fails_when_read_args_fails() {
@@ -279,9 +278,12 @@ mod pre_compute_start_with_app_tests {
                     Some(ENCLAVE_CHALLENGE_PRIVATE_KEY),
                 ),
                 (ENV_WORKER_HOST, Some(mock_server_addr_string.as_str())),
+                (IEXEC_INPUT_FILES_NUMBER, Some("0")),
+                (IEXEC_PRE_COMPUTE_OUT, Some(OUTPUT_DIR)),
+                (IS_DATASET_REQUIRED, Some("false")),
             ];
 
-            temp_env::with_vars(env_vars, || start_with_app(&mock, CHAIN_TASK_ID))
+            temp_env::with_vars(env_vars, start)
         })
         .await
         .expect("Blocking task panicked");
