@@ -33,10 +33,9 @@ pub enum ExitMode {
 /// use crate::app_runner::start;
 /// use crate::pre_compute_app::PreComputeApp;
 ///
-/// let chain_task_id = "0x123456789abcdef";
-/// let pre_compute_args = PreComputeArgs::read_args()?;
+/// let chain_task_id = "0x123456789abcdef".to_string();
+/// let mut pre_compute_app = PreComputeApp::new(chain_task_id.clone());
 ///
-/// let pre_compute_app = PreComputeApp::new(pre_compute_args, chain_task_id);
 /// let exit_code = start_with_app(&pre_compute_app, &chain_task_id)
 /// ```
 pub fn start_with_app<A: PreComputeAppTrait>(
