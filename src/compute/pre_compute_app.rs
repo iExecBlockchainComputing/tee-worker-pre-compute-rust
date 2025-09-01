@@ -26,7 +26,7 @@ const AES_IV_LENGTH: usize = 16;
 
 #[cfg_attr(test, automock)]
 pub trait PreComputeAppTrait {
-    fn run(&mut self, chain_task_id: &str) -> Result<(), ReplicateStatusCause>;
+    fn run(&mut self) -> Result<(), ReplicateStatusCause>;
     fn check_output_folder(&self) -> Result<(), ReplicateStatusCause>;
     fn download_input_files(&self) -> Result<(), ReplicateStatusCause>;
     fn download_encrypted_dataset(&self) -> Result<Vec<u8>, ReplicateStatusCause>;
@@ -35,25 +35,24 @@ pub trait PreComputeAppTrait {
 }
 
 pub struct PreComputeApp {
-    chain_task_id: Option<String>,
-    pre_compute_args: Option<PreComputeArgs>,
+    chain_task_id: String,
+    pre_compute_args: PreComputeArgs,
 }
 
 impl PreComputeApp {
-    pub fn new() -> Self {
+    pub fn new(chain_task_id: String) -> Self {
         PreComputeApp {
-            chain_task_id: None,
-            pre_compute_args: None,
+            chain_task_id,
+            pre_compute_args: PreComputeArgs::default(),
         }
     }
 }
 
 impl PreComputeAppTrait for PreComputeApp {
-    fn run(&mut self, chain_task_id: &str) -> Result<(), ReplicateStatusCause> {
-        self.chain_task_id = Some(chain_task_id.to_string());
-        self.pre_compute_args = Some(PreComputeArgs::read_args()?);
+    fn run(&mut self) -> Result<(), ReplicateStatusCause> {
+        self.pre_compute_args = PreComputeArgs::read_args()?;
         self.check_output_folder()?;
-        if self.pre_compute_args.as_ref().unwrap().is_dataset_required {
+        if self.pre_compute_args.is_dataset_required {
             let encrypted_content = self.download_encrypted_dataset()?;
             let plain_content = self.decrypt_dataset(&encrypted_content)?;
             self.save_plain_dataset_file(&plain_content)?;
@@ -82,14 +81,8 @@ impl PreComputeAppTrait for PreComputeApp {
     /// pre_compute_app.check_output_folder()?;
     /// ```
     fn check_output_folder(&self) -> Result<(), ReplicateStatusCause> {
-        let output_dir = self
-            .pre_compute_args
-            .as_ref()
-            .ok_or(ReplicateStatusCause::PreComputeOutputFolderNotFound)?
-            .output_dir
-            .clone();
-
-        let chain_task_id = self.chain_task_id.as_deref().unwrap_or("unknown");
+        let output_dir: &str = &self.pre_compute_args.output_dir;
+        let chain_task_id: &str = &self.chain_task_id;
 
         info!("Checking output folder [chainTaskId:{chain_task_id}, path:{output_dir}]");
 
@@ -130,8 +123,8 @@ impl PreComputeAppTrait for PreComputeApp {
     /// pre_compute_app.download_input_files()?;
     /// ```
     fn download_input_files(&self) -> Result<(), ReplicateStatusCause> {
-        let args = self.pre_compute_args.as_ref().unwrap();
-        let chain_task_id = self.chain_task_id.as_ref().unwrap();
+        let args = &self.pre_compute_args;
+        let chain_task_id: &str = &self.chain_task_id;
 
         for url in &args.input_files {
             info!("Downloading input file [chainTaskId:{chain_task_id}, url:{url}]");
@@ -162,8 +155,8 @@ impl PreComputeAppTrait for PreComputeApp {
     /// app.download_encrypted_dataset()?;
     /// ```
     fn download_encrypted_dataset(&self) -> Result<Vec<u8>, ReplicateStatusCause> {
-        let args = self.pre_compute_args.as_ref().unwrap();
-        let chain_task_id: &str = self.chain_task_id.as_ref().unwrap();
+        let args = &self.pre_compute_args;
+        let chain_task_id = &self.chain_task_id;
         let encrypted_dataset_url: &str = &args.encrypted_dataset_url;
 
         info!(
@@ -228,11 +221,7 @@ impl PreComputeAppTrait for PreComputeApp {
     /// let decrypted = app.decrypt_dataset(&encrypted)?;
     /// ```
     fn decrypt_dataset(&self, encrypted_content: &[u8]) -> Result<Vec<u8>, ReplicateStatusCause> {
-        let base64_key: &str = &self
-            .pre_compute_args
-            .as_ref()
-            .unwrap()
-            .encrypted_dataset_base64_key;
+        let base64_key: &str = &self.pre_compute_args.encrypted_dataset_base64_key;
 
         let key = general_purpose::STANDARD
             .decode(base64_key)
@@ -275,8 +264,8 @@ impl PreComputeAppTrait for PreComputeApp {
     /// app.save_plain_dataset_file(&plain_data)?;
     /// ```
     fn save_plain_dataset_file(&self, plain_dataset: &[u8]) -> Result<(), ReplicateStatusCause> {
-        let chain_task_id: &str = self.chain_task_id.as_ref().unwrap();
-        let args = self.pre_compute_args.as_ref().unwrap();
+        let chain_task_id: &str = &self.chain_task_id;
+        let args = &self.pre_compute_args;
         let output_dir: &str = &args.output_dir;
         let plain_dataset_filename: &str = &args.plain_dataset_filename;
 
@@ -325,8 +314,8 @@ mod tests {
         output_dir: &str,
     ) -> PreComputeApp {
         PreComputeApp {
-            chain_task_id: Some(chain_task_id.to_string()),
-            pre_compute_args: Some(PreComputeArgs {
+            chain_task_id: chain_task_id.to_string(),
+            pre_compute_args: PreComputeArgs {
                 input_files: urls.into_iter().map(String::from).collect(),
                 output_dir: output_dir.to_string(),
                 is_dataset_required: true,
@@ -334,7 +323,7 @@ mod tests {
                 encrypted_dataset_base64_key: ENCRYPTED_DATASET_KEY.to_string(),
                 encrypted_dataset_checksum: DATASET_CHECKSUM.to_string(),
                 plain_dataset_filename: PLAIN_DATA_FILE.to_string(),
-            }),
+            },
         }
     }
 
@@ -378,19 +367,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn check_output_folder_returns_err_with_invalid_pre_compute_args() {
-        let app = PreComputeApp {
-            chain_task_id: Some(CHAIN_TASK_ID.to_string()),
-            pre_compute_args: None,
-        };
-
-        let result = app.check_output_folder();
-        assert_eq!(
-            result,
-            Err(ReplicateStatusCause::PreComputeOutputFolderNotFound)
-        );
-    }
     // endregion
 
     // region download_input_files
@@ -495,9 +471,7 @@ mod tests {
     #[test]
     fn download_encrypted_dataset_failure_with_invalid_dataset_url() {
         let mut app = get_pre_compute_app(CHAIN_TASK_ID, vec![], "");
-        if let Some(args) = &mut app.pre_compute_args {
-            args.encrypted_dataset_url = "http://bad-url".to_string();
-        }
+        app.pre_compute_args.encrypted_dataset_url = "http://bad-url".to_string();
         let actual_content = app.download_encrypted_dataset();
         assert_eq!(
             actual_content,
@@ -508,11 +482,9 @@ mod tests {
     #[test]
     fn download_encrypted_dataset_success_with_valid_iexec_gateway() {
         let mut app = get_pre_compute_app(CHAIN_TASK_ID, vec![], "");
-        if let Some(args) = &mut app.pre_compute_args {
-            args.encrypted_dataset_url = IPFS_DATASET_URL.to_string();
-            args.encrypted_dataset_checksum =
-                "0x323b1637c7999942fbebfe5d42fe15dbfe93737577663afa0181938d7ad4a2ac".to_string();
-        }
+        app.pre_compute_args.encrypted_dataset_url = IPFS_DATASET_URL.to_string();
+        app.pre_compute_args.encrypted_dataset_checksum =
+            "0x323b1637c7999942fbebfe5d42fe15dbfe93737577663afa0181938d7ad4a2ac".to_string();
         let actual_content = app.download_encrypted_dataset();
         let expected_content = Ok("hello world !\n".as_bytes().to_vec());
         assert_eq!(actual_content, expected_content);
@@ -521,9 +493,7 @@ mod tests {
     #[test]
     fn download_encrypted_dataset_failure_with_invalid_gateway() {
         let mut app = get_pre_compute_app(CHAIN_TASK_ID, vec![], "");
-        if let Some(args) = &mut app.pre_compute_args {
-            args.encrypted_dataset_url = "/ipfs/INVALID_IPFS_DATASET_URL".to_string();
-        }
+        app.pre_compute_args.encrypted_dataset_url = "/ipfs/INVALID_IPFS_DATASET_URL".to_string();
         let actual_content = app.download_encrypted_dataset();
         let expected_content = Err(ReplicateStatusCause::PreComputeDatasetDownloadFailed);
         assert_eq!(actual_content, expected_content);
@@ -532,9 +502,7 @@ mod tests {
     #[test]
     fn download_encrypted_dataset_failure_with_invalid_dataset_checksum() {
         let mut app = get_pre_compute_app(CHAIN_TASK_ID, vec![], "");
-        if let Some(args) = &mut app.pre_compute_args {
-            args.encrypted_dataset_checksum = "invalid_dataset_checksum".to_string()
-        }
+        app.pre_compute_args.encrypted_dataset_checksum = "invalid_dataset_checksum".to_string();
         let actual_content = app.download_encrypted_dataset();
         let expected_content = Err(ReplicateStatusCause::PreComputeInvalidDatasetChecksum);
         assert_eq!(actual_content, expected_content);
@@ -556,9 +524,7 @@ mod tests {
     #[test]
     fn decrypt_dataset_failure_with_bad_key() {
         let mut app = get_pre_compute_app(CHAIN_TASK_ID, vec![], "");
-        if let Some(args) = &mut app.pre_compute_args {
-            args.encrypted_dataset_base64_key = "bad_key".to_string();
-        }
+        app.pre_compute_args.encrypted_dataset_base64_key = "bad_key".to_string();
         let encrypted_data = app.download_encrypted_dataset().unwrap();
         let actual_plain_data = app.decrypt_dataset(&encrypted_data);
 
@@ -602,9 +568,7 @@ mod tests {
         let output_path = temp_dir.path().to_str().unwrap();
 
         let mut app = get_pre_compute_app(CHAIN_TASK_ID, vec![], output_path);
-        if let Some(args) = &mut app.pre_compute_args {
-            args.plain_dataset_filename = "/some-folder-123/not-found".to_string();
-        }
+        app.pre_compute_args.plain_dataset_filename = "/some-folder-123/not-found".to_string();
         let plain_dataset = "Some very useful data.".as_bytes().to_vec();
         let saved_dataset = app.save_plain_dataset_file(&plain_dataset);
 
